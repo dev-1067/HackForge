@@ -1,6 +1,7 @@
 """Accounts and sign-in sessions: registration, login, throttling, session lookup."""
 from __future__ import annotations
 
+import hashlib
 import re
 import secrets
 from dataclasses import dataclass
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from .db import Database
 from .errors import AuthError, ValidationFailed
-from .models import AuthSessionRow, CompanyRow, LoginAttemptRow, RiderRow, UserRow
+from .models import AuthSessionRow, CompanyRow, LoginAttemptRow, RiderRow, SignInEventRow, UserRow
 from .security import (burn_password_check, hash_password, identifier_digest, new_token, token_digest,
                        verify_password)
 from .settings import Settings
@@ -38,6 +39,30 @@ class AuthContext:
 
     def public(self) -> dict:
         return {"user_id": self.user_id, "role": self.role, "name": self.name, "rider_id": self.rider_id}
+
+
+def describe_browser(user_agent: str | None) -> str:
+    """A short, human label such as "Chrome on Windows". Never stores the raw header."""
+    ua = user_agent or ""
+    if not ua:
+        return "Unknown browser"
+    if "Edg/" in ua:
+        browser = "Edge"
+    elif "OPR/" in ua or "Opera" in ua:
+        browser = "Opera"
+    elif "Firefox/" in ua:
+        browser = "Firefox"
+    elif "Chrome/" in ua or "CriOS" in ua:
+        browser = "Chrome"
+    elif "Safari/" in ua:
+        browser = "Safari"
+    else:
+        browser = "Browser"
+    for marker, name in (("iPhone", "iPhone"), ("iPad", "iPad"), ("Android", "Android"), ("Windows", "Windows"),
+                         ("Mac OS X", "Mac"), ("CrOS", "ChromeOS"), ("Linux", "Linux")):
+        if marker in ua:
+            return f"{browser} on {name}"
+    return browser
 
 
 def normalise_phone(raw: str) -> str:
@@ -175,6 +200,59 @@ class AuthService:
                                   created_at=now, expires_at=expires, last_seen_at=now))
             db.commit()
         return token, self._context(user, csrf), expires
+
+    def record_sign_in(self, user_id: int, token: str, user_agent: str | None) -> bool:
+        """Remember this sign-in. Returns True when the browser has not been used by this person before."""
+        label = describe_browser(user_agent)
+        fingerprint = hashlib.sha256(label.encode()).hexdigest()[:32]
+        with self.db.session() as db:
+            seen_before = db.scalar(select(func.count()).select_from(SignInEventRow).where(
+                SignInEventRow.user_id == user_id)) or 0
+            known = db.scalar(select(func.count()).select_from(SignInEventRow).where(
+                SignInEventRow.user_id == user_id, SignInEventRow.fingerprint == fingerprint)) or 0
+            is_new = seen_before > 0 and known == 0
+            db.add(SignInEventRow(user_id=user_id, at=utcnow(), browser_label=label, fingerprint=fingerprint,
+                                  is_new_browser=is_new, token_hash=token_digest(token)))
+            db.commit()
+        return is_new
+
+    def active_sessions(self, user_id: int, current_token: str | None) -> list[dict]:
+        """Where this person is currently signed in (most recent first)."""
+        now = utcnow()
+        current = token_digest(current_token) if current_token else None
+        with self.db.session() as db:
+            rows = db.execute(
+                select(AuthSessionRow, SignInEventRow.browser_label, SignInEventRow.is_new_browser)
+                .outerjoin(SignInEventRow, SignInEventRow.token_hash == AuthSessionRow.token_hash)
+                .where(AuthSessionRow.user_id == user_id, AuthSessionRow.expires_at > now)
+                .order_by(AuthSessionRow.created_at.desc())).all()
+            return [{"signed_in_at": s.created_at.isoformat(), "last_active": s.last_seen_at.isoformat(),
+                     "browser": label or "Unknown browser", "is_new_browser": bool(is_new),
+                     "current": s.token_hash == current} for s, label, is_new in rows]
+
+    def revoke_other_sessions(self, user_id: int, current_token: str | None) -> int:
+        keep = token_digest(current_token) if current_token else ""
+        with self.db.session() as db:
+            result = db.execute(delete(AuthSessionRow).where(
+                AuthSessionRow.user_id == user_id, AuthSessionRow.token_hash != keep))
+            db.commit()
+            return result.rowcount or 0
+
+    def change_password(self, user_id: int, current_password: str, new_password: str, current_token: str | None) -> int:
+        """Change a password after checking the current one; signs out every other session."""
+        errors: dict[str, str] = {}
+        validate_password(new_password, errors)
+        if errors:
+            raise ValidationFailed({"new_password": errors["password"]})
+        with self.db.session() as db:
+            user = db.get(UserRow, user_id)
+            if user is None or not verify_password(current_password or "", user.password_hash):
+                raise ValidationFailed({"current_password": "That is not your current password."})
+            if verify_password(new_password, user.password_hash):
+                raise ValidationFailed({"new_password": "Choose a password you have not used here before."})
+            user.password_hash = hash_password(new_password)
+            db.commit()
+        return self.revoke_other_sessions(user_id, current_token)
 
     def resolve(self, token: str | None) -> AuthContext | None:
         if not token:

@@ -12,7 +12,7 @@ import { StatusPill } from '@/components/ui/StatusPill'
 import {
   LEVEL_LABEL, LEVEL_TONE, STATUS_LABEL, STATUS_TONE, actorLabel, auditSentence, describeFlags, featureName, formatBaseline, whenText,
 } from '@/lib/plain'
-import type { AuditEntry, RiderDetail, TimelineItem } from '@/types/api'
+import type { AuditEntry, RiderDetail, TeamRequest, TimelineItem } from '@/types/api'
 
 const BASELINE_ORDER = ['accept_latency_ms', 'idle_gap_min', 'cancel_rate', 'accept_rate', 'login_hour', 'avg_speed_kmh', 'route_deviation', 'orders_per_hour', 'tap_interval_ms', 'swipe_speed']
 
@@ -22,13 +22,14 @@ export const RiderDetailPage: React.FC = () => {
   const [rider, setRider] = useState<RiderDetail | null>(null)
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [audit, setAudit] = useState<AuditEntry[]>([])
+  const [requests, setRequests] = useState<TeamRequest[]>([])
   const [error, setError] = useState('')
   const [missing, setMissing] = useState(false)
 
   const load = useCallback(async () => {
     try {
-      const [r, t, a] = await Promise.all([ops.rider(riderId), ops.timeline(riderId, 120), ops.riderAudit(riderId)])
-      setRider(r); setTimeline(t); setAudit(a); setError(''); setMissing(false)
+      const [r, t, a, q] = await Promise.all([ops.rider(riderId), ops.timeline(riderId, 120), ops.riderAudit(riderId), ops.requests({ rider_id: riderId })])
+      setRider(r); setTimeline(t); setAudit(a); setRequests(q); setError(''); setMissing(false)
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) setMissing(true)
       else setError((e as Error).message)
@@ -49,7 +50,7 @@ export const RiderDetailPage: React.FC = () => {
   if (missing) {
     return (
       <div className="space-y-3">
-        <Link to="/riders" className="text-sm text-muted-foreground underline underline-offset-2">Back to riders</Link>
+        <Link to="/riders" className="text-app-sm text-muted-foreground underline underline-offset-2">Back to riders</Link>
         <Alert tone="warning">We could not find a rider with the ID “{riderId}”.</Alert>
       </div>
     )
@@ -59,14 +60,14 @@ export const RiderDetailPage: React.FC = () => {
   const name = rider.name ?? `Rider ${rider.rider_id}`
   return (
     <div className="space-y-4">
-      <Link to="/riders" className="text-sm text-muted-foreground underline underline-offset-2">← All riders</Link>
+      <Link to="/riders" className="text-app-sm text-muted-foreground underline underline-offset-2">← All riders</Link>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="flex flex-wrap items-baseline gap-x-3">
-          <h2 className="text-xl font-semibold text-foreground">{name}</h2>
-          <span className="text-sm text-muted-foreground">{rider.rider_id}</span>
+          <h2 className="text-app-xl font-semibold text-foreground">{name}</h2>
+          <span className="text-app-sm text-muted-foreground">{rider.rider_id}</span>
           <StatusPill tone={STATUS_TONE[rider.status] ?? 'ok'}>{STATUS_LABEL[rider.status] ?? rider.status}</StatusPill>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-app-sm text-muted-foreground">
           {rider.sessions_seen} sessions · last seen {whenText(rider.last_seen_at)}
           {rider.known_devices > 0 && ` · ${rider.known_devices} phone${rider.known_devices === 1 ? '' : 's'}`}
           {rider.known_cities.length > 0 && ` · ${rider.known_cities.join(', ')}`}
@@ -86,9 +87,9 @@ export const RiderDetailPage: React.FC = () => {
         </Panel>
         <Panel title="Usual pattern">
           {Object.keys(rider.baseline).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Still learning this rider’s pattern.</p>
+            <p className="text-app-sm text-muted-foreground">Still learning this rider’s pattern.</p>
           ) : (
-            <dl className="space-y-1.5 text-sm">
+            <dl className="space-y-1.5 text-app-sm">
               {BASELINE_ORDER.filter((k) => k in rider.baseline).map((key) => (
                 <div key={key} className="flex justify-between gap-3">
                   <dt className="text-muted-foreground">{featureName(key)}</dt>
@@ -103,9 +104,9 @@ export const RiderDetailPage: React.FC = () => {
       <Panel title="Recent sessions" flush>
         {timeline.length === 0 ? <EmptyState title="No sessions yet.">Activity appears here after the rider’s first deliveries.</EmptyState> : (
           <div className="max-h-96 overflow-auto">
-            <table className="w-full min-w-[520px] text-left text-sm">
+            <table className="w-full min-w-[520px] text-left text-app-sm">
               <thead className="sticky top-0 bg-card">
-                <tr className="border-b border-border text-[13px] text-muted-foreground">
+                <tr className="border-b border-border text-app-13 text-muted-foreground">
                   <th className="px-4 py-2 font-medium">When</th><th className="px-4 py-2 font-medium">Where</th>
                   <th className="px-4 py-2 font-medium">Phone</th><th className="px-4 py-2 font-medium">Result</th>
                 </tr>
@@ -125,13 +126,30 @@ export const RiderDetailPage: React.FC = () => {
         )}
       </Panel>
 
+      {requests.length > 0 && (
+        <Panel title="Requests from this rider" flush>
+          <ul className="divide-y divide-border text-app-sm">
+            {requests.map((q) => (
+              <li key={q.id} className="px-4 py-2.5">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <span className="font-medium text-foreground">{q.kind_label}{q.device_label ? ` · ${q.device_label}` : ''}</span>
+                  <span className="text-app-13 text-muted-foreground">{q.status_label} · {whenText(q.created_at)}</span>
+                </div>
+                <p className="text-muted-foreground">{q.message}</p>
+                {q.response_note && <p className="mt-1 text-foreground">Reply: {q.response_note}</p>}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
+
       {audit.length > 0 && (
         <Panel title="History" flush>
-          <ul className="divide-y divide-border text-sm">
+          <ul className="divide-y divide-border text-app-sm">
             {audit.map((a) => (
               <li key={a.id} className="flex flex-wrap justify-between gap-2 px-4 py-2">
                 <span className="text-foreground">{auditSentence(a)}</span>
-                <span className="text-[13px] text-muted-foreground">{actorLabel(a.actor)} · {whenText(a.at)}</span>
+                <span className="text-app-13 text-muted-foreground">{actorLabel(a.actor)} · {whenText(a.at)}</span>
               </li>
             ))}
           </ul>

@@ -17,7 +17,7 @@ export const Field: React.FC<FieldProps> = ({ label, value, onChange, error, hin
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-foreground">{label}</label>
+      <label htmlFor={id} className="mb-1.5 block text-app-sm font-medium text-foreground">{label}</label>
       <div className="relative">
         <input
           id={id}
@@ -27,7 +27,7 @@ export const Field: React.FC<FieldProps> = ({ label, value, onChange, error, hin
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className={cn(
-            'w-full rounded-lg border bg-card px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70',
+            'w-full rounded-lg border bg-card px-3.5 py-2.5 text-app-sm text-foreground placeholder:text-muted-foreground/70',
             'focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring',
             error ? 'border-rose-500' : 'border-border',
             isPassword && 'pr-16',
@@ -38,7 +38,7 @@ export const Field: React.FC<FieldProps> = ({ label, value, onChange, error, hin
           <button
             type="button"
             onClick={() => setVisible((v) => !v)}
-            className="absolute inset-y-0 right-0 px-3.5 text-xs font-medium text-muted-foreground hover:text-foreground focus:outline-none focus-visible:underline"
+            className="absolute inset-y-0 right-0 px-3.5 text-app-xs font-medium text-muted-foreground hover:text-foreground focus:outline-none focus-visible:underline"
             aria-label={visible ? 'Hide password' : 'Show password'}
           >
             {visible ? 'Hide' : 'Show'}
@@ -46,9 +46,9 @@ export const Field: React.FC<FieldProps> = ({ label, value, onChange, error, hin
         )}
       </div>
       {error ? (
-        <p id={`${id}-error`} className="mt-1.5 text-[13px] text-rose-700 dark:text-rose-400">{error}</p>
+        <p id={`${id}-error`} className="mt-1.5 text-app-13 text-rose-700 dark:text-rose-400">{error}</p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="mt-1.5 text-[13px] text-muted-foreground">{hint}</p>
+        <p id={`${id}-hint`} className="mt-1.5 text-app-13 text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   )

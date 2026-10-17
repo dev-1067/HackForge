@@ -61,13 +61,13 @@ export const RidersPage: React.FC = () => {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by rider ID"
           aria-label="Search riders"
-          className="w-full rounded-lg border border-border bg-card px-3.5 py-2 text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40 sm:max-w-xs"
+          className="w-full rounded-lg border border-border bg-card px-3.5 py-2 text-app-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40 sm:max-w-xs"
         />
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           aria-label="Filter by status"
-          className="rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+          className="rounded-lg border border-border bg-card px-3 py-2 text-app-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
         >
           {STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
@@ -81,9 +81,9 @@ export const RidersPage: React.FC = () => {
           <EmptyState title="No riders match.">Try a different search or status.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
+            <table className="w-full min-w-[560px] text-left text-app-sm">
               <thead>
-                <tr className="border-b border-border text-[13px] text-muted-foreground">
+                <tr className="border-b border-border text-app-13 text-muted-foreground">
                   <th className="px-4 py-2 font-medium">Rider</th>
                   <th className="px-4 py-2 font-medium">Status</th>
                   <th className="px-4 py-2 font-medium">Sessions</th>
@@ -97,7 +97,7 @@ export const RidersPage: React.FC = () => {
                       <Link to={`/riders/${encodeURIComponent(r.rider_id)}`} className="font-medium text-foreground hover:underline focus:outline-none focus-visible:underline">
                         {r.name ?? `Rider ${r.rider_id}`}
                       </Link>
-                      {r.name && <span className="ml-2 text-[13px] text-muted-foreground">{r.rider_id}</span>}
+                      {r.name && <span className="ml-2 text-app-13 text-muted-foreground">{r.rider_id}</span>}
                     </td>
                     <td className="px-4 py-2"><StatusPill tone={STATUS_TONE[r.status] ?? 'ok'}>{STATUS_LABEL[r.status] ?? r.status}</StatusPill></td>
                     <td className="px-4 py-2 text-muted-foreground">{r.sessions_seen}</td>

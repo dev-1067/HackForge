@@ -99,3 +99,13 @@
 .animate-status-pulse {
   animation: status-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* Text size for the signed-in app (Settings > Appearance). Only app-* font sizes read this. */
+:root { --tj-scale: 1.08; }
+:root[data-text-size='standard'] { --tj-scale: 1; }
+:root[data-text-size='comfortable'] { --tj-scale: 1.08; }
+:root[data-text-size='large'] { --tj-scale: 1.2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin { animation-duration: 2.4s; }
+}

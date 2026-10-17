@@ -14,9 +14,9 @@ export const DecisionTable: React.FC<{ decisions: Decision[]; emptyText?: string
   }
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px] text-left text-sm">
+      <table className="w-full min-w-[640px] text-left text-app-sm">
         <thead>
-          <tr className="border-b border-border text-[13px] text-muted-foreground">
+          <tr className="border-b border-border text-app-13 text-muted-foreground">
             <th className="px-4 py-2 font-medium">When</th>
             <th className="px-4 py-2 font-medium">Rider</th>
             <th className="px-4 py-2 font-medium">Where</th>
@@ -32,7 +32,7 @@ export const DecisionTable: React.FC<{ decisions: Decision[]; emptyText?: string
                 <Link to={`/riders/${encodeURIComponent(d.rider_id)}`} className="font-medium text-foreground hover:underline focus:outline-none focus-visible:underline">
                   {d.rider_name ?? `Rider ${d.rider_id}`}
                 </Link>
-                {d.rider_name && <span className="ml-2 text-[13px] text-muted-foreground">{d.rider_id}</span>}
+                {d.rider_name && <span className="ml-2 text-app-13 text-muted-foreground">{d.rider_id}</span>}
               </td>
               <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{place(d)}</td>
               <td className="px-4 py-2"><StatusPill tone={LEVEL_TONE[d.level]}>{LEVEL_LABEL[d.level]}</StatusPill></td>

@@ -22,16 +22,16 @@ export const HistoryPage: React.FC = () => {
   if (entries === null && !error) return <Spinner label="Loading history" />
   return (
     <div className="space-y-4">
-      <p className="max-w-2xl text-sm text-muted-foreground">Every extra check and every decision made by the team, newest first.</p>
+      <p className="max-w-2xl text-app-sm text-muted-foreground">Every extra check and every decision made by the team, newest first.</p>
       {error && <Alert tone="error">{error}</Alert>}
       <Panel flush>
         {entries && entries.length === 0 ? (
           <EmptyState title="Nothing has happened yet.">Checks and decisions are listed here once they take place.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
+            <table className="w-full min-w-[560px] text-left text-app-sm">
               <thead>
-                <tr className="border-b border-border text-[13px] text-muted-foreground">
+                <tr className="border-b border-border text-app-13 text-muted-foreground">
                   <th className="px-4 py-2 font-medium">When</th><th className="px-4 py-2 font-medium">Rider</th>
                   <th className="px-4 py-2 font-medium">What happened</th><th className="px-4 py-2 font-medium">By</th>
                 </tr>

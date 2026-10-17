@@ -2,14 +2,12 @@ import React from 'react'
 import { Menu, Moon, Sun } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
 import { useAuth } from '@/auth/AuthContext'
-import { useOps } from '@/components/app/OpsContext'
 import { Button } from '@/components/ui/Button'
-import { cn } from '@/lib/utils'
 
-export const Header: React.FC<{ title: string; onMenu: () => void }> = ({ title, onMenu }) => {
+/** Top bar for every signed-in page. ``status`` is an optional note next to the title (e.g. "Live"). */
+export const Header: React.FC<{ title: string; onMenu: () => void; status?: React.ReactNode }> = ({ title, onMenu, status }) => {
   const { theme, toggleTheme } = useTheme()
   const { user, signOut } = useAuth()
-  const { live } = useOps()
   const [signingOut, setSigningOut] = React.useState(false)
 
   return (
@@ -22,14 +20,11 @@ export const Header: React.FC<{ title: string; onMenu: () => void }> = ({ title,
         >
           <Menu className="h-5 w-5" />
         </button>
-        <h1 className="truncate text-lg font-semibold text-foreground">{title}</h1>
-        <span className="hidden items-center gap-1.5 text-[13px] text-muted-foreground sm:inline-flex" aria-live="polite">
-          <span className={cn('h-2 w-2 rounded-full', live ? 'bg-emerald-500' : 'bg-amber-500')} aria-hidden="true" />
-          {live ? 'Live' : 'Reconnecting'}
-        </span>
+        <h1 className="truncate text-app-lg font-semibold text-foreground">{title}</h1>
+        {status}
       </div>
       <div className="flex items-center gap-2">
-        <span className="hidden text-sm text-muted-foreground md:inline">{user?.name}</span>
+        <span className="hidden text-app-sm text-muted-foreground md:inline">{user?.name}</span>
         <button
           onClick={toggleTheme}
           className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"

@@ -11,9 +11,9 @@ import type { Decision } from '@/types/api'
 
 const Stat: React.FC<{ label: string; value: string | number; note?: string }> = ({ label, value, note }) => (
   <div className="px-4 py-3">
-    <p className="text-[13px] text-muted-foreground">{label}</p>
-    <p className="mt-0.5 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
-    {note && <p className="text-[13px] text-muted-foreground">{note}</p>}
+    <p className="text-app-13 text-muted-foreground">{label}</p>
+    <p className="mt-0.5 text-app-2xl font-semibold tracking-tight text-foreground">{value}</p>
+    {note && <p className="text-app-13 text-muted-foreground">{note}</p>}
   </div>
 )
 
@@ -69,22 +69,22 @@ export const DashboardPage: React.FC = () => {
 
         <Panel
           title="Needs review"
-          action={<Link to="/review-queue" className="text-[13px] font-medium text-foreground underline underline-offset-2">See all</Link>}
+          action={<Link to="/review-queue" className="text-app-13 font-medium text-foreground underline underline-offset-2">See all</Link>}
           flush
         >
           {cases.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-muted-foreground">No cases need your attention right now.</p>
+            <p className="px-4 py-8 text-center text-app-sm text-muted-foreground">No cases need your attention right now.</p>
           ) : (
             <ul className="divide-y divide-border">
               {cases.map((d) => (
                 <li key={d.decision_id}>
                   <Link to="/review-queue" className="block px-4 py-2.5 hover:bg-secondary/40 focus:outline-none focus-visible:bg-secondary/40">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-sm font-medium text-foreground">{d.rider_name ?? `Rider ${d.rider_id}`}</span>
-                      <span className="text-[13px] text-muted-foreground">{whenText(d.started_at ?? d.decided_at)}</span>
+                      <span className="text-app-sm font-medium text-foreground">{d.rider_name ?? `Rider ${d.rider_id}`}</span>
+                      <span className="text-app-13 text-muted-foreground">{whenText(d.started_at ?? d.decided_at)}</span>
                     </div>
-                    <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">{explain(d).summary}</p>
-                    <p className="mt-0.5 text-[13px] font-medium text-foreground">{STATUS_LABEL[d.status] ?? d.status}</p>
+                    <p className="mt-0.5 line-clamp-2 text-app-13 text-muted-foreground">{explain(d).summary}</p>
+                    <p className="mt-0.5 text-app-13 font-medium text-foreground">{STATUS_LABEL[d.status] ?? d.status}</p>
                   </Link>
                 </li>
               ))}
@@ -98,7 +98,7 @@ export const DashboardPage: React.FC = () => {
         flush
         action={
           <div className="flex items-center gap-2">
-            <div role="group" aria-label="Filter sessions" className="inline-flex overflow-hidden rounded-lg border border-border text-[13px]">
+            <div role="group" aria-label="Filter sessions" className="inline-flex overflow-hidden rounded-lg border border-border text-app-13">
               {(['all', 'attention'] as const).map((key) => (
                 <button
                   key={key}
@@ -116,7 +116,7 @@ export const DashboardPage: React.FC = () => {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search rider or city"
               aria-label="Search sessions"
-              className="hidden w-48 rounded-lg border border-border bg-card px-3 py-1.5 text-[13px] placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40 sm:block"
+              className="hidden w-48 rounded-lg border border-border bg-card px-3 py-1.5 text-app-13 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40 sm:block"
             />
           </div>
         }

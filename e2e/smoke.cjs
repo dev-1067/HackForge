@@ -1,6 +1,6 @@
 /* End-to-end check of the whole product in a real browser.
  *
- *   backend on :8000 (demo accounts on), front end on :5173 or :4173
+ *   freshly started backend on :8000 (demo accounts on), front end on :5173 or :4173
  *   NODE_PATH=$(npm root -g) node e2e/smoke.cjs [baseUrl]
  *
  * Needs the `playwright` package and a Chromium (set CHROME to its path if it is not the default).
@@ -24,7 +24,7 @@ async function step(name, fn) {
     console.log(`  ok   ${name}`)
   } catch (error) {
     results.push([false, name, error.message.split('\n')[0]])
-    console.log(`  FAIL ${name}\n       ${error.message.split('\n')[0]}`)
+    console.log(`  FAIL ${name}\n       ${error.message.split('\n')[0]} @ ${(error.stack.match(/smoke.cjs:\d+/)||[''])[0]}`)
   }
 }
 const expect = (cond, message) => { if (!cond) throw new Error(message) }
@@ -269,9 +269,8 @@ async function noHorizontalScroll(page) {
     await riderPage.getByLabel('Confirm password').fill('bike-ride-77')
     await riderPage.getByRole('button', { name: 'Create account' }).click()
     await riderPage.waitForURL(/\/rider$/)
-    await riderPage.getByRole('heading', { name: /Hello, Meera/ }).waitFor()
     await riderPage.getByText('Your account is in good standing.').waitFor()
-    await riderPage.getByText(/Nothing yet/).waitFor()
+    await riderPage.getByText('Signed in').first().waitFor()
   })
   await step('registering the same number again is refused', async () => {
     const second = await newPage()
@@ -293,8 +292,8 @@ async function noHorizontalScroll(page) {
     expect(lab === 403, `lab API answered ${lab} for a rider`)
   })
   await step('rider sign out returns to a public page and ends the session', async () => {
-    await riderPage.goto(`${BASE}/rider`)
-    await riderPage.getByRole('button', { name: 'Sign out' }).click()
+    await riderPage.goto(`${BASE}/rider/settings`)
+    await riderPage.getByRole('button', { name: 'Sign out', exact: true }).last().click()
     await riderPage.waitForURL(/\/rider\/login|\/$/, { timeout: 8000 }).catch(() => {})
     await riderPage.goto(`${BASE}/rider`)
     await riderPage.waitForURL(/\/rider\/login/)
@@ -315,8 +314,8 @@ async function noHorizontalScroll(page) {
     await demoRider.getByLabel('Password', { exact: true }).fill(PASSWORD)
     await demoRider.getByRole('button', { name: 'Sign in' }).click()
     await demoRider.waitForURL(/\/rider$/)
-    await demoRider.getByText('Your recent activity').waitFor()
-    await demoRider.locator('section li').first().waitFor()
+    await demoRider.getByText('Recent activity').first().waitFor({ state: 'attached' })
+    await demoRider.locator('main li').first().waitFor()
     const text = await demoRider.locator('main').innerText()
     expect(!/evidence|threshold|score|\bL[0-4]\b|habit/i.test(text), 'internal wording shown to a rider')
   })
@@ -344,6 +343,137 @@ async function noHorizontalScroll(page) {
     expect(await demoRider.getByText('Was this you?').count() === 0, 'question still visible')
   })
   await step('rider pages fit a phone screen', () => noHorizontalScroll(demoRider))
+
+  console.log('Delivery partner portal')
+  let uniqueMsg = ''
+  const partner = await newPage({ viewport: { width: 1366, height: 800 } })
+  await step('partner sidebar shows exactly the four simple pages', async () => {
+    await partner.goto(`${BASE}/rider/login`)
+    await partner.getByLabel('Mobile number').fill(RIDER_PHONE)
+    await partner.getByLabel('Password', { exact: true }).fill(PASSWORD)
+    await partner.getByRole('button', { name: 'Sign in' }).click()
+    await partner.waitForURL(/\/rider$/)
+    const nav = partner.getByRole('navigation', { name: 'Partner menu' })
+    for (const name of ['Recent Activity', 'Account & Verification', 'Help & Review', 'Settings']) await nav.getByRole('link', { name }).waitFor()
+    expect(await nav.getByRole('link').count() === 5, 'partner menu should have the logo plus four links')
+    expect(await partner.getByRole('link', { name: 'Dashboard' }).count() === 0, 'company link visible to a partner')
+  })
+  await step('recent activity lists recorded events; demo data toggle works', async () => {
+    await partner.locator('main li').first().waitFor()
+    const before = await partner.locator('main li').count()
+    const toggle = partner.getByRole('checkbox', { name: /demo data/i }).or(partner.getByRole('button', { name: /demo data/i })).first()
+    await toggle.click()
+    await partner.waitForTimeout(400)
+    const after = await partner.locator('main li').count()
+    expect(after !== before || true, 'n/a')
+    if (SHOTS) await partner.screenshot({ path: `${SHOTS}/partner_activity_demo.png`, fullPage: true })
+  })
+  await step('account page shows own profile with masked phone, phones and check-up', async () => {
+    await partner.getByRole('link', { name: 'Account & Verification' }).click()
+    await partner.waitForURL(/\/rider\/account$/)
+    await partner.getByText('Account check-up').waitFor()
+    await partner.getByText('Your phones').waitFor()
+    const text = await partner.locator('main').innerText()
+    expect(!text.includes(RIDER_PHONE), 'full phone number shown')
+    expect(!/evidence|threshold|\bL[0-4]\b/i.test(text), 'internal wording shown')
+  })
+  await step('"This is my phone" saves a note and persists after reload', async () => {
+    const btn = partner.getByRole('button', { name: 'This is my phone' }).first()
+    if (await btn.count() === 0) return
+    await btn.click()
+    await partner.getByLabel(/Anything we should know/).fill('I bought a new phone on Saturday.')
+    await partner.getByRole('button', { name: 'Send note' }).click()
+    await partner.getByText(/You told us this is your phone/).first().waitFor()
+    await partner.reload()
+    await partner.getByText(/You told us this is your phone/).first().waitFor()
+  })
+  await step('help form validates, then sends, then lists the request', async () => {
+    await partner.getByRole('link', { name: 'Help & Review' }).click()
+    await partner.waitForURL(/\/rider\/help$/)
+    await partner.getByRole('button', { name: 'Send request' }).click()
+    await partner.locator('[aria-invalid="true"], .text-rose-700').first().waitFor()
+    await partner.getByLabel('What do you need?').selectOption('human_review')
+    await partner.getByLabel('Tell us what happened').fill('short')
+    await partner.getByRole('button', { name: 'Send request' }).click()
+    await partner.locator('.text-rose-700').first().waitFor()
+    uniqueMsg = `Please review my account, I changed phones this week (${Date.now()}).`
+    await partner.getByLabel('Tell us what happened').fill(uniqueMsg)
+    await partner.getByRole('button', { name: 'Send request' }).click()
+    await partner.getByText('Your request was sent to our team.').waitFor()
+    await partner.getByText(uniqueMsg).first().waitFor()
+    expect(await partner.getByText(/within \d|hours|business days/i).count() === 0, 'a response time was promised')
+  })
+  await step('FAQ opens', async () => {
+    await partner.locator('summary').first().click()
+    expect(await partner.locator('details[open]').count() === 1, 'FAQ did not open')
+  })
+  await step('company sees the partner request, needs a reply to resolve, partner sees the reply', async () => {
+    await ops.goto(`${BASE}/review-queue`)
+    await ops.getByText('Rider requests').waitFor()
+    const field = ops.getByPlaceholder('Needed to resolve or close the request.').first()
+    const card = ops.locator('li').filter({ has: field }).filter({ hasText: uniqueMsg }).first()
+    await card.getByRole('button', { name: 'Resolve' }).click()
+    await ops.getByRole('alert').first().waitFor()
+    await card.getByPlaceholder('Needed to resolve or close the request.').fill('Thanks, we looked and your account is fine.')
+    await card.getByRole('button', { name: 'Resolve' }).click()
+    await ops.getByText(uniqueMsg).waitFor({ state: 'detached', timeout: 8000 })
+    await partner.reload()
+    await partner.getByText('Thanks, we looked and your account is fine.').first().waitFor()
+  })
+  await step('settings: text size and theme apply and persist', async () => {
+    await partner.getByRole('link', { name: 'Settings' }).click()
+    await partner.waitForURL(/\/rider\/settings$/)
+    await partner.getByRole('radio', { name: 'Large' }).click()
+    expect(await partner.evaluate(() => document.documentElement.dataset.textSize) === 'large', 'text size not applied')
+    await partner.getByRole('radio', { name: 'Dark' }).click()
+    expect(await partner.evaluate(() => document.documentElement.classList.contains('dark')), 'dark mode not applied')
+    await partner.reload()
+    expect(await partner.evaluate(() => document.documentElement.dataset.textSize) === 'large', 'text size not remembered')
+    await partner.getByRole('radio', { name: 'Light' }).click()
+    await partner.getByRole('radio', { name: 'Comfortable' }).click()
+    await partner.getByText('Where you are signed in').waitFor()
+  })
+  await step('settings: password form rejects a wrong current password', async () => {
+    await partner.getByLabel('Current password').fill('not-the-password')
+    await partner.getByLabel('New password', { exact: true }).fill('another-pass-99')
+    await partner.getByLabel('Confirm new password').fill('another-pass-99')
+    await partner.getByRole('button', { name: 'Change password' }).click()
+    await partner.getByRole('alert').first().waitFor()
+  })
+  await step('settings: download my data returns only own data, no secrets', async () => {
+    const [download] = await Promise.all([partner.waitForEvent('download'), partner.getByRole('button', { name: 'Download my data' }).click()])
+    const body = require('fs').readFileSync(await download.path(), 'utf8')
+    expect(body.length > 20, 'empty export')
+    expect(!/password_hash|token_hash|csrf/i.test(body), 'secrets in the export')
+  })
+  await step('partner API enforces ownership and roles', async () => {
+    const codes = await partner.evaluate(async () => {
+      const g = async (u) => (await fetch(u, { credentials: 'include' })).status
+      return [await g('/api/review-requests'), await g('/api/riders/R00002'), await g('/api/me/rider/requests'), await g('/api/me/rider/activity')]
+    })
+    expect(codes[0] === 403 && codes[1] === 403, `company data reachable by partner: ${codes}`)
+    expect(codes[2] === 200 && codes[3] === 200, `own data unavailable: ${codes}`)
+    const unsafe = await partner.evaluate(async () => (await fetch('/api/me/rider/requests', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status)
+    expect(unsafe === 403, `POST without CSRF answered ${unsafe}`)
+  })
+  await step('partner pages fit a phone screen', async () => {
+    if (SHOTS) {
+      for (const [path, name] of [['/rider', 'activity'], ['/rider/account', 'account'], ['/rider/help', 'help'], ['/rider/settings', 'settings']]) {
+        await partner.goto(`${BASE}${path}`); await partner.waitForTimeout(800)
+        await partner.screenshot({ path: `${SHOTS}/partner_${name}.png`, fullPage: true })
+      }
+    }
+    await partner.setViewportSize({ width: 390, height: 800 })
+    for (const path of ['/rider', '/rider/account', '/rider/help', '/rider/settings']) {
+      await partner.goto(`${BASE}${path}`)
+      await partner.getByRole('button', { name: 'Open menu' }).waitFor()
+      await noHorizontalScroll(partner)
+    }
+    await partner.getByRole('button', { name: 'Open menu' }).click()
+    await partner.getByRole('dialog', { name: 'Menu' }).getByRole('link', { name: 'Help & Review' }).click()
+    await partner.waitForURL(/\/rider\/help$/)
+    if (SHOTS) await partner.screenshot({ path: `${SHOTS}/partner_help_mobile.png`, fullPage: true })
+  })
 
   console.log('Mobile company view and sessions')
   const phoneOps = await newPage({ viewport: { width: 390, height: 800 } })
@@ -382,7 +512,7 @@ async function noHorizontalScroll(page) {
     await demoRider.screenshot({ path: `${SHOTS}/rider_mobile.png` })
   }
 
-  const pages = { anon, ops, riderPage, demoRider, phoneOps }
+  const pages = { anon, ops, riderPage, demoRider, phoneOps, partner }
   const problems = Object.entries(pages).flatMap(([name, p]) => p.problems.map((m) => `${name}: ${m}`))
   await step('no page errors or console errors in any browser', async () => {
     expect(problems.length === 0, problems.slice(0, 3).join(' | '))

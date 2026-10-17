@@ -59,6 +59,7 @@ export interface MetricsSummary {
   accounts_under_watch: number
   pending_reviews: number
   open_cases: number
+  open_requests: number
   open_stepups: number
   model_version: string
   simulation: {
@@ -164,4 +165,76 @@ export interface RiderOverview {
   account: { state: 'ok' | 'verification_needed' | 'on_hold' | 'suspended'; headline: string; detail: string; action_required: boolean }
   notices: string[]
   recent_activity: Array<{ when: string; city: string | null; phone: string; note: string; tone: 'normal' | 'noted' | 'check' }>
+}
+
+export type Origin = 'recorded' | 'demo'
+export type RequestStatus = 'open' | 'in_review' | 'resolved' | 'declined'
+export type RequestKind = 'unfamiliar_signin' | 'verification_help' | 'legitimate_change' | 'human_review' | 'device_change' | 'other'
+
+export interface ActivityEvent {
+  id: string
+  kind: string
+  at: string | null
+  origin: Origin
+  title: string
+  detail: string
+  tone: 'normal' | 'noted' | 'check'
+  action?: 'verify' | null
+}
+
+export interface DeviceInfo {
+  device_id: string
+  label: string
+  os: string | null
+  city: string | null
+  app_version: string | null
+  first_seen: string | null
+  last_seen: string | null
+  sessions: number
+  current: boolean
+  origin: Origin
+  reported: boolean
+}
+
+export interface AccountOverview {
+  profile: { name: string; rider_id: string; phone_hint: string | null; member_since: string | null; last_sign_in: string | null }
+  status: { state: RiderOverview['account']['state']; headline: string; detail: string; action_required: boolean }
+  verification: {
+    outstanding: { requested_at: string | null; message: string; origin: Origin } | null
+    history: Array<{ requested_at: string | null; resolved_at: string | null; result: 'pending' | 'passed' | 'failed'; origin: Origin }>
+    latest_event_at: string | null
+  }
+  devices: DeviceInfo[]
+  recent_device_changes: Array<{ at: string | null; label: string; city: string | null; origin: Origin; reported: boolean }>
+  checkup: Array<{ key: string; ok: boolean; text: string }>
+}
+
+export interface HelpRequest {
+  id: number
+  kind: RequestKind
+  kind_label: string
+  message: string
+  device_id: string | null
+  device_label: string | null
+  status: RequestStatus
+  status_label: string
+  created_at: string | null
+  updated_at: string | null
+  response_note: string | null
+  responded_at: string | null
+}
+
+export interface TeamRequest extends HelpRequest {
+  rider_id: string
+  rider_name: string | null
+  responded_by: string | null
+  rider_status: string
+}
+
+export interface ActiveSession {
+  signed_in_at: string
+  last_active: string
+  browser: string
+  is_new_browser: boolean
+  current: boolean
 }

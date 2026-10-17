@@ -62,6 +62,18 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      // Sizes for the signed-in app. They follow the person's text-size setting (--tj-scale);
+      // the public landing page keeps using the standard Tailwind sizes and is unaffected.
+      fontSize: {
+        'app-xs': ['calc(0.75rem * var(--tj-scale, 1.08))', '1.45'],
+        'app-13': ['calc(0.8125rem * var(--tj-scale, 1.08))', '1.45'],
+        'app-sm': ['calc(0.875rem * var(--tj-scale, 1.08))', '1.5'],
+        'app-15': ['calc(0.9375rem * var(--tj-scale, 1.08))', '1.45'],
+        'app-base': ['calc(1rem * var(--tj-scale, 1.08))', '1.5'],
+        'app-lg': ['calc(1.125rem * var(--tj-scale, 1.08))', '1.35'],
+        'app-xl': ['calc(1.25rem * var(--tj-scale, 1.08))', '1.3'],
+        'app-2xl': ['calc(1.5rem * var(--tj-scale, 1.08))', '1.25'],
+      },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],

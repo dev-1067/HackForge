@@ -109,3 +109,24 @@ class CompanyLoginIn(BaseModel):
 
 class VerificationIn(BaseModel):
     confirmed: bool
+
+
+class DeviceChangeIn(BaseModel):
+    device_id: str = Field(min_length=1, max_length=64)
+    note: str | None = Field(None, max_length=1000)
+
+
+class RequestIn(BaseModel):
+    kind: str = Field(max_length=24)
+    message: str = Field(max_length=4000)
+    device_id: str | None = Field(None, max_length=64)
+
+
+class PasswordIn(BaseModel):
+    current_password: str = Field(max_length=200)
+    new_password: str = Field(max_length=200)
+
+
+class RespondIn(BaseModel):
+    action: Literal["start_review", "resolve", "decline"]
+    note: str | None = Field(None, max_length=1200)
