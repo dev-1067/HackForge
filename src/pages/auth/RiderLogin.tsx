@@ -40,6 +40,20 @@ export const RiderLogin: React.FC = () => {
         <Field label="Password" type="password" autoComplete="current-password" value={password}
           onChange={(v) => { setPassword(v); clearError('password') }} error={errors.password} />
         <Button type="submit" loading={busy} className="w-full">{busy ? 'Signing in' : 'Sign in'}</Button>
+        <div className="pt-1 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setPhone('9000000001')
+              setPassword('demo-pass-123')
+              clearError('phone')
+              clearError('password')
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          >
+            Fill demo credentials (9000000001)
+          </button>
+        </div>
       </form>
     </AuthShell>
   )
