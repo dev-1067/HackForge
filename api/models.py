@@ -202,5 +202,14 @@ class ReviewRequestRow(Base):
 
 
 # Tables holding simulated / operational data. Accounts and sign-in sessions are never reset.
+class NotificationReadRow(Base):
+    """When a rider last opened their notifications. Anything newer is unread."""
+
+    __tablename__ = "notification_reads"
+
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    last_read_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 DEMO_TABLES = [RiderRow.__table__, SessionRow.__table__, DecisionRow.__table__, StepupRow.__table__,
                ProfileRow.__table__, AuditRow.__table__]

@@ -200,6 +200,7 @@ export interface RiderOverview {
   account: { state: 'ok' | 'verification_needed' | 'on_hold' | 'suspended'; headline: string; detail: string; action_required: boolean }
   notices: string[]
   explanation: StatusExplanation | null
+  unread_notifications?: number
   recent_activity: Array<{ when: string; city: string | null; phone: string; note: string; tone: 'normal' | 'noted' | 'check' }>
 }
 
@@ -275,3 +276,35 @@ export interface ActiveSession {
   is_new_browser: boolean
   current: boolean
 }
+
+export interface NotificationItem {
+  id: string
+  kind: string
+  at: string | null
+  origin: Origin
+  tone: 'normal' | 'noted' | 'check'
+  title: string
+  detail: string
+  link: string
+  sticky: boolean
+  unread: boolean
+}
+
+export interface WorkSummary {
+  days: number
+  period: { from: string | null; to: string | null }
+  sessions: Array<{ at: string; city: string | null; origin: Origin }>
+  totals: { sessions: number; active_days: number; phones: number; cities: Array<{ city: string; sessions: number }> }
+  all_time: { sessions: number; first_seen: string | null; last_seen: string | null }
+  includes_demo: boolean
+}
+
+export interface SignInRow { at: string; browser: string; new_browser: boolean; current: boolean }
+
+export interface DbColumn { name: string; type: string; primary_key: boolean; foreign_key: string | null; hidden: boolean; masked: boolean }
+export interface DbTableInfo { name: string; rows: number; note: string; demo: boolean; columns: DbColumn[] }
+export interface DbOverview {
+  connection: { engine: string; name: string | null; size_kb?: number; host?: string | null; port?: number | null; how_to_open: string }
+  tables: DbTableInfo[]
+}
+export interface DbRows { table: string; total: number; limit: number; offset: number; columns: string[]; rows: Array<Record<string, unknown>> }

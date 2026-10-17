@@ -11,8 +11,8 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from . import partner, portal
-from .auth import AuthContext, AuthService
+from . import dbview, partner, portal
+from .auth import AuthContext, AuthService, token_digest
 from .deps import (COOKIE_NAME, any_user, company_user, current_context, ingest_access, rider_user)
 from .errors import (AuthError, DuplicateSession, InvalidState, LabUnavailable, UnknownDecision, UnknownRider,
                      ValidationFailed)
@@ -134,7 +134,9 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     @app.get("/me/rider", tags=["rider portal"])
     def my_account(ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
         """The signed-in rider's own account: status, notices and recent activity (no internal scores)."""
-        return portal.rider_overview(svc, ctx)
+        data = portal.rider_overview(svc, ctx)
+        data["unread_notifications"] = partner.unread_notifications(svc, ctx)
+        return data
 
     @app.post("/me/rider/verification", tags=["rider portal"])
     def my_verification(body: VerificationIn, ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
@@ -165,6 +167,26 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     def my_new_request(body: RequestIn, ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
         """Ask for help or a human review."""
         return partner.create_request(svc, ctx, body.kind, body.message, body.device_id)
+
+    @app.get("/me/rider/notifications", tags=["rider portal"])
+    def my_notifications(ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
+        """Replies, checks, new phones and browsers, and the account status, with what is unread."""
+        return partner.notifications(svc, ctx)
+
+    @app.post("/me/rider/notifications/read", tags=["rider portal"])
+    def read_notifications(ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
+        return partner.mark_notifications_read(svc, ctx)
+
+    @app.get("/me/rider/summary", tags=["rider portal"])
+    def my_summary(days: int = Query(30, ge=7, le=90), ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
+        """The rider's own sessions for the last ``days`` days up to their latest one: when, where, how many phones."""
+        return partner.work_summary(svc, ctx, days)
+
+    @app.get("/me/sign-ins", tags=["accounts"])
+    def my_sign_ins(request: Request, ctx: AuthContext = Depends(any_user)) -> list[dict[str, Any]]:
+        """Recent successful sign-ins to this account, newest first."""
+        token = request.cookies.get(COOKIE_NAME)
+        return partner.sign_in_history(svc, ctx, token_digest(token) if token else None)
 
     @app.get("/me/rider/export", tags=["rider portal"])
     def my_export(ctx: AuthContext = Depends(rider_user)) -> JSONResponse:
@@ -267,6 +289,17 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     def map_riders(city: str | None = None, limit: int = Query(500, ge=1, le=1000)) -> list[dict[str, Any]]:
         """Each rider's last known city and area (from their latest session) with their current status."""
         return svc.rider_map(city, limit)
+
+    @ops.get("/db/overview", tags=["database"])
+    def db_overview() -> dict[str, Any]:
+        """Which database is connected, every table with its columns and row count. Read-only."""
+        return dbview.overview(svc.db)
+
+    @ops.get("/db/tables/{name}", tags=["database"])
+    def db_table(name: str, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+                 q: str | None = Query(None, max_length=80)) -> dict[str, Any]:
+        """Rows of one table, newest first. Secrets are hidden and phone numbers and e-mails masked."""
+        return dbview.rows(svc.db, name, limit=limit, offset=offset, q=q)
 
     @ops.get("/filters", tags=["decisions"])
     def filter_options() -> dict[str, Any]:

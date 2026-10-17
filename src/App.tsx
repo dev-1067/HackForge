@@ -24,6 +24,10 @@ import { RecentActivityPage } from '@/pages/rider/RecentActivityPage'
 import { RiderLayout } from '@/pages/rider/RiderLayout'
 import { SessionsPage } from '@/pages/company/SessionsPage'
 import { SessionDetailPage } from '@/pages/company/SessionDetailPage'
+import { NotificationsPage } from '@/pages/rider/NotificationsPage'
+import { WorkSummaryPage } from '@/pages/rider/WorkSummaryPage'
+import { SecurityPage } from '@/pages/rider/SecurityPage'
+import { DatabasePage } from '@/pages/company/DatabasePage'
 import { SettingsPage } from '@/pages/shared/SettingsPage'
 
 export function App() {
@@ -44,6 +48,9 @@ export function App() {
             {/* Delivery rider */}
             <Route path="/rider" element={<RequireRole role="rider"><RiderLayout /></RequireRole>}>
               <Route index element={<RecentActivityPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="summary" element={<WorkSummaryPage />} />
+              <Route path="security" element={<SecurityPage />} />
               <Route path="account" element={<AccountPage />} />
               <Route path="help" element={<HelpPage />} />
               <Route path="settings" element={<SettingsPage />} />
@@ -59,6 +66,7 @@ export function App() {
               <Route path="/sessions" element={<SessionsPage />} />
               <Route path="/sessions/:kind/:id" element={<SessionDetailPage />} />
               <Route path="/audit" element={<HistoryPage />} />
+              <Route path="/database" element={<DatabasePage />} />
               <Route path="/simulation" element={<DemoLabPage />} />
               <Route path="/analytics" element={<ComparePage />} />
               <Route path="/settings" element={<SettingsPage />} />

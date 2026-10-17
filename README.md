@@ -556,6 +556,8 @@ Anyone can also create a rider account at `/rider/register`. Company sign-up at 
 
 **Finding things (operations):** *Riders* searches by name, rider ID or phone number; *Sessions* looks a session up by its session ID or decision number and filters by date range, result, city, area and phone; *Needs review* and *History* have search, filters and date ranges. Details and limits: `FEATURE_AUDIT_AND_PENDING_WORK.md`.
 
+**See the database (for judges and reviewers).** Sign in as the operations user and open **Database** in the sidebar (`http://localhost:5173/database`). It shows which database is connected, every table with its columns, keys and row counts, and lets you browse, search and page through the real rows. It is read-only; password hashes, session and CSRF tokens are never shown and phone numbers and e-mails are masked. To look at the file itself: with the default SQLite setup open `data/trustjuggler.db` in DB Browser for SQLite, the `sqlite3` command line (`sqlite3 data/trustjuggler.db ".tables"`) or an editor extension; with PostgreSQL (`docker compose up`) connect psql, pgAdmin or DBeaver using the host, port, database and user in `DATABASE_URL`. A browser link is only available while the app is running on your machine; to show the data without the app, show the file in one of those tools.
+
 **More accounts without the web form:** `python -m api.manage create-company-user --name "Asha" --email asha@fleet.example` (asks for the password), `create-rider`, `set-password`, `list-users`.
 
 **PostgreSQL instead of SQLite:** set `DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db`, or `docker compose up --build` for the API with a PostgreSQL container. Tables are created automatically.

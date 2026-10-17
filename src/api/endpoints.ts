@@ -1,7 +1,7 @@
 import { API_BASE, request } from './http'
 import type {
   AccountOverview, ActiveSession, ActivityEvent, HelpRequest, TeamRequest,
-  AuditEntry, CompareData, Decision, FilterOptions, MapRider, LabState, MetricsSummary, RiderDetail, RiderListItem, RiderOverview,
+  AuditEntry, CompareData, DbOverview, DbRows, NotificationItem, SignInRow, WorkSummary, Decision, FilterOptions, MapRider, LabState, MetricsSummary, RiderDetail, RiderListItem, RiderOverview,
   Scenario, Session, TimelineItem,
 } from '@/types/api'
 
@@ -35,10 +35,14 @@ export const rider = {
   sendRequest: (kind: string, message: string, device_id?: string) =>
     request<HelpRequest>('/me/rider/requests', { method: 'POST', body: { kind, message, device_id: device_id || undefined } }),
   exportData: () => request<Record<string, unknown>>('/me/rider/export'),
+  notifications: () => request<{ items: NotificationItem[]; unread: number; last_read_at: string }>('/me/rider/notifications'),
+  markNotificationsRead: () => request<{ items: NotificationItem[]; unread: number; last_read_at: string }>('/me/rider/notifications/read', { method: 'POST' }),
+  summary: (days = 30) => request<WorkSummary>(`/me/rider/summary?days=${days}`),
 }
 
 export const account = {
   sessions: () => request<ActiveSession[]>('/me/sessions'),
+  signIns: () => request<SignInRow[]>('/me/sign-ins'),
   signOutOthers: () => request<{ signed_out: number }>('/me/sessions/sign-out-others', { method: 'POST' }),
   changePassword: (current_password: string, new_password: string) =>
     request<{ signed_out_elsewhere: number }>('/me/password', { method: 'POST', body: { current_password, new_password } }),
@@ -63,6 +67,9 @@ export const ops = {
   audit: (params: Record<string, string | number | undefined> = {}) => request<AuditEntry[]>(`/audit?${qs(params)}`),
   sessionLookup: (sessionId: string) => request<Decision>(`/sessions/${encodeURIComponent(sessionId)}`),
   filters: () => request<FilterOptions>('/filters'),
+  dbOverview: () => request<DbOverview>('/db/overview'),
+  dbTable: (name: string, params: { limit?: number; offset?: number; q?: string } = {}) =>
+    request<DbRows>(`/db/tables/${encodeURIComponent(name)}?${qs(params)}`),
   map: (city?: string) => request<MapRider[]>(`/map/riders?${qs({ city })}`),
   requests: (params: { status?: string; rider_id?: string } = {}) =>
     request<TeamRequest[]>(`/review-requests?${qs(params)}`),
