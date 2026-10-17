@@ -380,12 +380,16 @@ HackForge/
 │   ├── service.py             # engine + DB + events (TrustService)
 │   ├── lab.py                 # simulated world, scenarios, background runner
 │   ├── models.py, db.py       # SQLAlchemy schema, SQLite / PostgreSQL
+│   ├── auth.py, deps.py, security.py   # accounts, role checks, password hashing
+│   ├── portal.py, seed.py, manage.py   # rider view, demo accounts, provisioning CLI
 │   ├── schemas.py, settings.py, errors.py, bus.py, asgi.py
 │   └── tests/
-├── web/                       # Dev C
-│   ├── src/pages/ (Live, Rider, Lab, Tradeoff, Review)
-│   ├── src/components/
-│   └── src/api/ (client + mocks)
+├── src/                       # front end (React + Vite + Tailwind)
+│   ├── pages/                 # landing, auth/ (4 forms), rider/, company/ (dashboard, review, riders, history, lab, compare)
+│   ├── auth/, api/            # session context, role guard, API client (cookie + CSRF)
+│   ├── components/            # layout, ui primitives, landing sections
+│   └── lib/plain.ts           # plain-language wording for results and reasons
+├── e2e/smoke.cjs              # real-browser end-to-end check (37 steps)
 └── docs/
     ├── pitch.md
     ├── demo-script.md
@@ -396,9 +400,7 @@ HackForge/
 
 ## 12. Work split for three developers
 
-> **Status:** Dev A's part (engine, simulator, evaluation) and Dev B's part (API, database, live stream, lab) are implemented and tested. See [`docs/dev-a.md`](docs/dev-a.md) and [`docs/dev-b.md`](docs/dev-b.md) for the hand-offs. Dev C (dashboard) is next.
-
-Keep the contract (sections 7 and 8) frozen after hour 2, so each person can work against mocks.
+> **Status:** implemented and tested: the engine and simulator (Dev A, [`docs/dev-a.md`](docs/dev-a.md)), the API, database, accounts and live stream (Dev B, [`docs/dev-b.md`](docs/dev-b.md)), and the app: public landing page, rider and company sign-in, a rider page, and the company dashboard with review, riders, history, demo lab and comparison pages (`src/`, driven end to end by `e2e/smoke.cjs`). How to run it is in section 19.
 
 ### Dev A: Engine, simulator and evaluation (the brain)
 **Owns:** `engine/`, `sim/`
@@ -523,17 +525,51 @@ Sleep in shifts. Never leave the demo path untested for more than 4 hours.
 
 ---
 
-## 19. Quick start (fill in as you build)
+## 19. Run it
+
+Verified on Python 3.13 and Node 22. Everything below was run as written.
 
 ```bash
+# 1. configuration (the file is git-ignored; the example enables demo accounts for development only)
 cp .env.example .env
-docker compose up --build                   # postgres + API on :8000 (or: uvicorn api.asgi:app)
+
+# 2. backend: http://localhost:8000  (API docs at /docs)
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m sim.generate --riders 5000 --days 60
-uvicorn api.main:app --reload              # http://localhost:8000/docs
-cd web && npm install && npm run dev       # http://localhost:5173
+uvicorn api.asgi:app --port 8000
+
+# 3. front end: http://localhost:5173  (the dev server proxies /api to the backend)
+npm ci
+npm run dev
 ```
+
+The first start creates the tables (SQLite file `data/trustjuggler.db`), builds the 60 simulated riders and creates the demo accounts. It takes about 5 seconds.
+
+**Sign in** (development accounts from `.env.example`, password `demo-pass-123`):
+
+| Role | Where | Identifier |
+|---|---|---|
+| Operations team | `/company/login` | `ops@trustjuggler.demo` |
+| Delivery rider | `/rider/login` | `9000000001` (linked to simulated rider R00001), `9000000002`, `9000000003` |
+
+Anyone can also create a rider account at `/rider/register`. Company sign-up at `/company/register` needs the invite code in `TJ_COMPANY_INVITE_CODE`.
+
+**More accounts without the web form:** `python -m api.manage create-company-user --name "Asha" --email asha@fleet.example` (asks for the password), `create-rider`, `set-password`, `list-users`.
+
+**PostgreSQL instead of SQLite:** set `DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db`, or `docker compose up --build` for the API with a PostgreSQL container. Tables are created automatically.
+
+**Checks:**
+
+```bash
+python -m pytest -q                                   # engine, simulator, API, accounts (about 3 minutes)
+npm run build && npm run lint                         # type check + production build + lint
+npm run preview &                                     # serves the build on :4173
+NODE_PATH=$(npm root -g) node e2e/smoke.cjs           # drives the real app in Chromium (needs `playwright`)
+```
+
+**Data and restarts.** Accounts, the company and sign-in sessions are stored in the database and survive restarts. The simulated riders, sessions and decisions are demo data: with `TJ_RESET_ON_START=true` (default) they are rebuilt at every start, and the **Reset the demo** button does the same. With `TJ_RESET_ON_START=false` nothing is cleared, rider baselines are restored from the database, and the simulation lab is off (there is no simulator to feed it).
+
+**What is simulated.** The riders, their sessions and the habit signals (tap rhythm, time to accept an order, and so on) are generated by `sim/`. The rider's "confirm it is you" step is a button, not a real selfie or liveness check. Password reset by email is not built (there is no mail service); an administrator resets a password with `python -m api.manage set-password`.
 
 ## 20. Glossary
 

@@ -3,6 +3,7 @@ import json
 import threading
 
 import pytest
+from fastapi.testclient import TestClient
 
 from api.tests.conftest import lab_payloads
 
@@ -14,8 +15,7 @@ def score(client, payload):
 
 
 def test_health_and_openapi(client):
-    health = client.get("/health").json()
-    assert health["status"] == "ok" and health["riders"] == 10 and health["lab"] is True
+    assert client.get("/health").json() == {"status": "ok"}
     paths = set(client.get("/openapi.json").json()["paths"])
     assert {"/sessions/score", "/riders/{rider_id}", "/riders/{rider_id}/timeline", "/decisions",
             "/decisions/{decision_id}/review", "/stepup/{rider_id}/result", "/stream",
@@ -175,7 +175,10 @@ def test_compare_is_404_when_the_file_is_missing(settings, tmp_path):
     from api.main import create_app
     settings.compare_path = tmp_path / "nope.json"
     settings.lab_enabled = False
+    from api.seed import DEMO_COMPANY_EMAIL
+    from api.tests.conftest import sign_in
     with TestClient(create_app(settings)) as c:
+        sign_in(c, "company", DEMO_COMPANY_EMAIL)
         assert c.get("/metrics/compare").status_code == 404
 
 
@@ -250,7 +253,17 @@ def test_lab_reset_restores_a_clean_world(client):
     assert client.get(f"/riders/{RIDER}").json()["status"] == "active"
 
 
-def test_concurrent_scoring_is_safe(client):
+def test_concurrent_scoring_is_safe(settings, tmp_path):
+    from api.main import create_app
+    from api.seed import DEMO_COMPANY_EMAIL
+    from api.tests.conftest import sign_in
+    settings.database_url = f"sqlite:///{tmp_path}/concurrent.db"
+    with TestClient(create_app(settings)) as client:
+        sign_in(client, "company", DEMO_COMPANY_EMAIL)
+        run_concurrent_scoring(client)
+
+
+def run_concurrent_scoring(client):
     payloads = {r: lab_payloads(client, r, 6) for r in ("R00001", "R00002", "R00004", "R00006")}
     before = {r: client.get(f"/riders/{r}").json()["sessions_seen"] for r in payloads}
     errors = []

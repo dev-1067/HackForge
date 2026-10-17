@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -99,3 +99,64 @@ class AuditRow(Base):
     action: Mapped[str] = mapped_column(String(48))
     details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     at: Mapped[datetime] = mapped_column(DateTime)
+
+
+# ---------------------------------------------------------------------------- accounts
+class CompanyRow(Base):
+    __tablename__ = "companies"
+
+    company_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class UserRow(Base):
+    """A person who can sign in: a delivery rider or a member of the company's operations team."""
+
+    __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("role IN ('rider', 'company')", name="ck_users_role"),
+        CheckConstraint(
+            "(role = 'rider' AND phone IS NOT NULL AND rider_id IS NOT NULL AND company_id IS NULL) OR "
+            "(role = 'company' AND email IS NOT NULL AND company_id IS NOT NULL AND rider_id IS NULL)",
+            name="ck_users_role_fields"),
+    )
+
+    user_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    role: Mapped[str] = mapped_column(String(16), index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    email: Mapped[str | None] = mapped_column(String(160), unique=True, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
+    password_hash: Mapped[str] = mapped_column(String(200))
+    # Soft reference to riders.rider_id: demo data can be reset without deleting accounts.
+    rider_id: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    company_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("companies.company_id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class AuthSessionRow(Base):
+    __tablename__ = "auth_sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), index=True)
+    csrf_token: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class LoginAttemptRow(Base):
+    __tablename__ = "login_attempts"
+    __table_args__ = (Index("ix_login_attempts_key_time", "key_hash", "at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key_hash: Mapped[str] = mapped_column(String(64))
+    at: Mapped[datetime] = mapped_column(DateTime)
+    success: Mapped[bool] = mapped_column(Boolean)
+
+
+# Tables holding simulated / operational data. Accounts and sign-in sessions are never reset.
+DEMO_TABLES = [RiderRow.__table__, SessionRow.__table__, DecisionRow.__table__, StepupRow.__table__,
+               ProfileRow.__table__, AuditRow.__table__]

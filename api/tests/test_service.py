@@ -1,10 +1,9 @@
 import asyncio
-from types import SimpleNamespace
 
 import pytest
 
 from api.bus import EventBus
-from api.main import create_app, sse_message
+from api.main import sse_message
 from api.service import TrustService
 from api.settings import Settings
 from sim.live import LiveWorld
@@ -53,31 +52,26 @@ def test_sse_framing():
     assert sse_message("decision", {"a": 1}) == 'event: decision\ndata: {"a": 1}\n\n'
 
 
-def test_stream_endpoint_emits_hello_then_events():
-    settings = Settings(database_url="sqlite://", lab_enabled=False)
-    app = create_app(settings)
-    app.state.service.startup()
-    endpoint = next(r.endpoint for r in app.routes if getattr(r, "path", "") == "/stream")
+def test_stream_endpoint_emits_hello_then_events(app, live_server):
+    import httpx
+    from api.seed import DEMO_COMPANY_EMAIL
+    from api.tests.conftest import DEMO_PASSWORD
+    bus = app.state.service.bus
+    with httpx.Client(base_url=live_server, timeout=10) as http:
+        assert http.post("/auth/company/login", json={"email": DEMO_COMPANY_EMAIL, "password": DEMO_PASSWORD}).status_code == 200
+        with http.stream("GET", "/stream") as response:
+            assert response.status_code == 200 and response.headers["content-type"].startswith("text/event-stream")
+            lines = response.iter_lines()
+            assert next(lines) == "event: hello"
+            next(lines), next(lines)  # data line and the blank separator
+            assert bus.subscriber_count == 1
+            bus.publish("decision", {"level": "L2"})
+            assert next(lines) == "event: decision"
+            assert next(lines) == 'data: {"level": "L2"}'
 
-    async def scenario():
-        app.state.service.bus.attach_loop(asyncio.get_running_loop())
 
-        async def never_disconnected():
-            return False
-
-        response = await endpoint(SimpleNamespace(is_disconnected=never_disconnected))
-        assert response.media_type == "text/event-stream"
-        body = response.body_iterator
-        assert (await body.__anext__()).startswith("event: hello")
-        assert app.state.service.bus.subscriber_count == 1
-        app.state.service.bus.publish("decision", {"level": "L2"})
-        chunk = await asyncio.wait_for(body.__anext__(), 2)
-        assert chunk == 'event: decision\ndata: {"level": "L2"}\n\n'
-        await body.aclose()
-        assert app.state.service.bus.subscriber_count == 0
-
-    asyncio.run(scenario())
-    app.state.service.close()
+def test_stream_requires_sign_in(anon):
+    assert anon.get("/stream").status_code == 401
 
 
 def test_decision_events_reach_subscribers(client):

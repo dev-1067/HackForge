@@ -28,6 +28,7 @@ class DecisionOut(BaseModel):
     decision_id: int
     session_id: str
     rider_id: str
+    rider_name: str | None = None
     decided_at: str
     started_at: str | None = None
     level: Literal["L0", "L1", "L2", "L3", "L4"]
@@ -48,6 +49,7 @@ class DecisionOut(BaseModel):
     source: str | None = None
     ground_truth: dict[str, Any] | None = Field(None, description="Simulation only.")
     resolution: dict[str, Any] | None = Field(None, description="Lab only: how the step-up / review played out.")
+    session: dict[str, Any] | None = Field(None, description="Full context and habit values (single-decision lookups).")
 
 
 class StepupIn(BaseModel):
@@ -79,3 +81,31 @@ class LabRunIn(BaseModel):
     action: Literal["start", "stop"]
     rate: float = Field(2.0, gt=0, le=100, description="Sessions per second.")
     auto_resolve: bool = True
+
+
+# ---------------------------------------------------------------------------- accounts
+class RiderRegisterIn(BaseModel):
+    name: str = Field(max_length=120)
+    phone: str = Field(max_length=40)
+    password: str = Field(max_length=200)
+
+
+class RiderLoginIn(BaseModel):
+    phone: str = Field(max_length=40)
+    password: str = Field(max_length=200)
+
+
+class CompanyRegisterIn(BaseModel):
+    name: str = Field(max_length=120)
+    email: str = Field(max_length=200)
+    password: str = Field(max_length=200)
+    invite_code: str = Field(max_length=200)
+
+
+class CompanyLoginIn(BaseModel):
+    email: str = Field(max_length=200)
+    password: str = Field(max_length=200)
+
+
+class VerificationIn(BaseModel):
+    confirmed: bool

@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from .models import Base
+from .models import DEMO_TABLES, Base
 
 
 class Database:
@@ -39,7 +39,13 @@ class Database:
     def create_all(self) -> None:
         Base.metadata.create_all(self.engine)
 
+    def reset_demo(self) -> None:
+        """Clear simulated rider data. Accounts, companies and sign-in sessions are kept."""
+        Base.metadata.drop_all(self.engine, tables=DEMO_TABLES)
+        Base.metadata.create_all(self.engine)
+
     def reset(self) -> None:
+        """Drop everything (tests only)."""
         Base.metadata.drop_all(self.engine)
         Base.metadata.create_all(self.engine)
 

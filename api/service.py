@@ -16,7 +16,7 @@ from engine.profile import ESCALATED_STATUSES, STATUS_PENDING
 from .bus import EventBus
 from .db import Database
 from .errors import DuplicateSession, InvalidState, UnknownDecision, UnknownRider
-from .models import AuditRow, DecisionRow, ProfileRow, RiderRow, SessionRow, StepupRow
+from .models import AuditRow, DecisionRow, ProfileRow, RiderRow, SessionRow, StepupRow, UserRow
 from .settings import Settings
 
 LEVELS = ("L0", "L1", "L2", "L3", "L4")
@@ -40,6 +40,15 @@ def decision_payload(row: DecisionRow, started_at: datetime | None = None) -> di
     }
 
 
+def rider_names(db: DbSession, rider_ids: set[str] | list[str]) -> dict[str, str]:
+    """Display names for riders who have an account; everyone else is shown by their id."""
+    ids = list(set(rider_ids))
+    if not ids:
+        return {}
+    rows = db.execute(select(UserRow.rider_id, UserRow.name).where(UserRow.rider_id.in_(ids))).all()
+    return {rid: name for rid, name in rows}
+
+
 class TrustService:
     def __init__(self, settings: Settings, engine: TrustEngine | None = None) -> None:
         self.settings = settings
@@ -51,10 +60,10 @@ class TrustService:
 
     # ------------------------------------------------------------------ lifecycle
     def startup(self) -> None:
+        self.db.create_all()
         if self.settings.reset_on_start:
-            self.db.reset()
+            self.db.reset_demo()
         else:
-            self.db.create_all()
             self._restore_engine()
 
     def _restore_engine(self) -> None:
@@ -72,7 +81,7 @@ class TrustService:
         with self.lock:
             settings = self.settings
             self.engine = (load_engine(settings.model_path) if settings.model_path else load_default_engine())
-            self.db.reset()
+            self.db.reset_demo()
 
     def close(self) -> None:
         self.db.dispose()
@@ -135,6 +144,7 @@ class TrustService:
                 payload = decision_payload(row, session.started_at)
                 payload["context"] = {k: session.context.get(k) for k in ("device_id", "city", "zone", "network_type")}
                 payload["source"] = source
+                payload["rider_name"] = rider_names(db, [session.rider_id]).get(session.rider_id)
                 if ground_truth:
                     payload["ground_truth"] = ground_truth
                 db.commit()
@@ -159,6 +169,11 @@ class TrustService:
                 db.add(pending)
             pending.method, pending.resolved_at = method, now
             pending.result = "passed" if passed else "failed"
+            if passed:  # the rider confirmed it is them, so the open cases for this rider are settled
+                db.execute(update(DecisionRow).where(
+                    DecisionRow.rider_id == rider_id, DecisionRow.level_num >= 2,
+                    DecisionRow.review_verdict.is_(None)).values(
+                    review_verdict="rider_verified", reviewed_by="rider", reviewed_at=now))
             self._sync_rider(db, rider_id)
             self._save_profile(db, rider_id)
             db.add(AuditRow(rider_id=rider_id, actor=actor, action="stepup_" + pending.result,
@@ -209,7 +224,8 @@ class TrustService:
             counts = dict(db.execute(select(DecisionRow.level, func.count()).where(
                 DecisionRow.rider_id == rider_id).group_by(DecisionRow.level)).all())
             return {
-                "rider_id": row.rider_id, "archetype": row.archetype, "home_city": row.home_city,
+                "rider_id": row.rider_id, "name": rider_names(db, [rider_id]).get(rider_id),
+                "archetype": row.archetype, "home_city": row.home_city,
                 "status": summary.get("status", row.status), "sessions_seen": row.sessions_seen,
                 "last_level": row.last_level, "last_evidence": row.last_evidence,
                 "last_seen_at": row.last_seen_at.isoformat() if row.last_seen_at else None,
@@ -230,7 +246,8 @@ class TrustService:
             if q:
                 stmt = stmt.where(RiderRow.rider_id.like(f"%{q}%"))
             rows = db.scalars(stmt.limit(limit).offset(offset)).all()
-            return [{"rider_id": r.rider_id, "archetype": r.archetype, "home_city": r.home_city,
+            names = rider_names(db, [r.rider_id for r in rows])
+            return [{"rider_id": r.rider_id, "name": names.get(r.rider_id), "archetype": r.archetype, "home_city": r.home_city,
                      "status": r.status, "sessions_seen": r.sessions_seen, "last_level": r.last_level,
                      "last_evidence": r.last_evidence,
                      "last_seen_at": r.last_seen_at.isoformat() if r.last_seen_at else None} for r in rows]
@@ -258,7 +275,7 @@ class TrustService:
                        rider_id: str | None = None, unreviewed: bool = False, limit: int = 50,
                        offset: int = 0) -> list[dict[str, Any]]:
         with self.db.session() as db:
-            stmt = select(DecisionRow, SessionRow.started_at).join(
+            stmt = select(DecisionRow, SessionRow).join(
                 SessionRow, SessionRow.session_id == DecisionRow.session_id).order_by(DecisionRow.decision_id.desc())
             if level:
                 stmt = stmt.where(DecisionRow.level == level)
@@ -268,7 +285,15 @@ class TrustService:
                 stmt = stmt.where(DecisionRow.rider_id == rider_id)
             if unreviewed:
                 stmt = stmt.where(DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None))
-            return [decision_payload(d, started) for d, started in db.execute(stmt.limit(limit).offset(offset))]
+            rows = db.execute(stmt.limit(limit).offset(offset)).all()
+            names = rider_names(db, [d.rider_id for d, _ in rows])
+            out = []
+            for d, session in rows:
+                payload = decision_payload(d, session.started_at)
+                payload["rider_name"] = names.get(d.rider_id)
+                payload["context"] = {k: session.context.get(k) for k in ("device_id", "city", "zone", "network_type")}
+                out.append(payload)
+            return out
 
     def get_decision(self, decision_id: int) -> dict[str, Any]:
         with self.db.session() as db:
@@ -277,7 +302,11 @@ class TrustService:
                 DecisionRow.decision_id == decision_id)).first()
             if row is None:
                 raise UnknownDecision(str(decision_id))
-            return decision_payload(row[0], row[1])
+            payload = decision_payload(row[0], row[1])
+            session = db.get(SessionRow, row[0].session_id)
+            payload["session"] = {"context": session.context, "habit": session.habit}
+            payload["rider_name"] = rider_names(db, [row[0].rider_id]).get(row[0].rider_id)
+            return payload
 
     def audit_log(self, rider_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
         with self.db.session() as db:
@@ -301,6 +330,8 @@ class TrustService:
                 "stepup_rate": round(stepups / total, 5) if total else 0.0,
                 "accounts_under_watch": sum(n for s, n in by_status.items() if s != "active"),
                 "pending_reviews": db.scalar(select(func.count()).select_from(DecisionRow).where(
+                    DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None))) or 0,
+                "open_cases": db.scalar(select(func.count(func.distinct(DecisionRow.rider_id))).where(
                     DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None))) or 0,
                 "open_stepups": db.scalar(select(func.count()).select_from(StepupRow).where(
                     StepupRow.result == "pending")) or 0,

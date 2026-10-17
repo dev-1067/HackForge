@@ -1,87 +1,54 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'motion/react'
-import { Sidebar } from './Sidebar'
+import { X } from 'lucide-react'
+import { OpsProvider, useOps } from '@/components/app/OpsContext'
+import { Alert } from '@/components/ui/Alert'
 import { Header } from './Header'
+import { Sidebar } from './Sidebar'
 
-interface AppLayoutProps {
-  searchQuery: string
-  onSearchChange: (val: string) => void
-  isStreaming: boolean
-  onToggleStreaming: () => void
-  onManualTick: () => void
-  lastSyncTime?: string
-}
+const TITLES: Array<[string, string]> = [
+  ['/dashboard', 'Dashboard'],
+  ['/review-queue', 'Needs review'],
+  ['/riders', 'Riders'],
+  ['/audit', 'History'],
+  ['/simulation', 'Demo lab'],
+  ['/analytics', 'How it compares'],
+]
 
-export const AppLayout: React.FC<AppLayoutProps> = ({
-  searchQuery,
-  onSearchChange,
-  isStreaming,
-  onToggleStreaming,
-  onManualTick,
-  lastSyncTime,
-}) => {
-  const [collapsed, setCollapsed] = useState(false)
-  const location = useLocation()
-
-  const getPageTitle = () => {
-    switch (location.pathname) {
-      case '/dashboard':
-      case '/live':
-        return 'Operations Console'
-      case '/riders':
-        return 'Rider Investigation'
-      case '/simulation':
-        return 'Simulation Lab'
-      case '/analytics':
-        return 'Trade-off Analytics'
-      case '/review-queue':
-        return 'Review Queue'
-      case '/audit':
-        return 'Audit Trail'
-      default:
-        return 'Operations Console'
-    }
-  }
+const Shell: React.FC = () => {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
+  const { summaryError } = useOps()
+  const title = TITLES.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? 'Dashboard'
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-      {/* Collapsible Left Sidebar */}
-      <Sidebar
-        collapsed={collapsed}
-        onToggleCollapse={() => setCollapsed(!collapsed)}
-      />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Top Header */}
-        <Header
-          isStreaming={isStreaming}
-          onToggleStreaming={onToggleStreaming}
-          onManualTick={onManualTick}
-          searchQuery={searchQuery}
-          onSearchChange={onSearchChange}
-          title={getPageTitle()}
-          lastSyncTime={lastSyncTime}
-        />
-
-        {/* Scrollable Page Body with Subtle Motion Transition */}
-        <main className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
-          <div className="max-w-7xl mx-auto">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+      <div className="hidden lg:block"><Sidebar /></div>
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 flex lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="relative"><Sidebar onNavigate={() => setMenuOpen(false)} />
+            <button onClick={() => setMenuOpen(false)} className="absolute right-2 top-3 rounded-lg p-2 text-muted-foreground hover:bg-secondary" aria-label="Close menu">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <button className="flex-1 bg-black/40" onClick={() => setMenuOpen(false)} aria-label="Close menu" />
+        </div>
+      )}
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+        <Header title={title} onMenu={() => setMenuOpen(true)} />
+        <main className="flex-1 overflow-y-auto px-4 py-5 md:px-6">
+          <div className="mx-auto max-w-6xl">
+            {summaryError && <Alert tone="warning" className="mb-4">{summaryError}</Alert>}
+            <Outlet />
           </div>
         </main>
       </div>
     </div>
   )
 }
+
+export const AppLayout: React.FC = () => (
+  <OpsProvider>
+    <Shell />
+  </OpsProvider>
+)

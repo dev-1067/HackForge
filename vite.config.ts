@@ -13,5 +13,23 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // The browser talks to /api on the same origin, so the session cookie is first-party.
+    proxy: {
+      '/api': {
+        target: process.env.VITE_BACKEND_URL ?? 'http://localhost:8000',
+        changeOrigin: false,
+        rewrite: (p) => p.replace(/^\/api/, ''),
+      },
+    },
+  },
+  preview: {
+    port: 4173,
+    proxy: {
+      '/api': {
+        target: process.env.VITE_BACKEND_URL ?? 'http://localhost:8000',
+        changeOrigin: false,
+        rewrite: (p) => p.replace(/^\/api/, ''),
+      },
+    },
   },
 })

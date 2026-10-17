@@ -5,11 +5,39 @@ FastAPI service around the Dev A engine. Interactive docs: **http://localhost:80
 ```bash
 pip install -r requirements.txt
 uvicorn api.asgi:app --port 8000            # SQLite in data/trustjuggler.db, lab on, ~5 s to start
-python -m pytest -q                         # 112 tests including the API
+python -m pytest -q                         # engine, simulator, API and accounts
 docker compose up --build                   # API + PostgreSQL (see "Untested" below)
 ```
 
-Start-up drops and re-seeds the demo data (`TJ_RESET_ON_START=true`): it creates 60 simulated riders, scores their 30-day history so every baseline is warm, and leaves the lab ready. Configuration is in `.env.example`.
+Start-up clears and rebuilds the **simulated** data (`TJ_RESET_ON_START=true`): 60 simulated riders with their 30-day history scored so every baseline is warm, and the lab ready. **Accounts, the company and sign-in sessions are never cleared.** Configuration is in `.env.example`; copy it to `.env`.
+
+## Accounts and access
+
+Two roles, both documented in the project plan: **rider** (a delivery partner) and **company** (the operations team that reviews cases). The plan defines no separate "customer" role, so none exists; a customer-facing role would need its own permissions and was not invented.
+
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| `POST` | `/auth/rider/register`, `/auth/rider/login` | anyone | name + mobile number + password |
+| `POST` | `/auth/company/register`, `/auth/company/login` | anyone | work email + password; sign-up needs `TJ_COMPANY_INVITE_CODE` (closed if unset) |
+| `GET` | `/auth/me` | signed in | the user and a CSRF token (401 when signed out) |
+| `POST` | `/auth/logout` | signed in | deletes the server-side session |
+| `GET` | `/me/rider` | rider | own status, notices, recent activity in plain words (no scores) |
+| `POST` | `/me/rider/verification` | rider | `{"confirmed": true/false}` answer to an extra-check request |
+| everything else | | company | operations data, review, lab, stream |
+| `POST` | `/sessions/score` | company, or a service with `X-Ingest-Key` | scoring input |
+
+* Passwords: scrypt with a random salt per password; only a digest of each session token is stored; failures look the same whether or not the account exists (and cost the same time); 5 failed sign-ins lock that account for 15 minutes.
+* Sessions: `HttpOnly`, `SameSite=Lax` cookie (`Secure` when `TJ_COOKIE_SECURE=true`); riders 7 days, company 12 hours; expired or deleted sessions are rejected by the server.
+* CSRF: every state-changing call from a signed-in browser must send the `X-CSRF-Token` returned by `/auth/login` or `/auth/me`.
+* Roles are enforced by the server on every route. A rider calling a company route gets 403, and a company user calling `/me/*` gets 403.
+* A rider answering "it was me" is a stand-in for a real selfie / liveness check, which is out of scope.
+* No password-reset email (there is no mail service). An administrator uses `python -m api.manage set-password <email-or-phone>`, which also signs that user out everywhere.
+
+Provisioning without the web form: `python -m api.manage create-company-user|create-rider|set-password|list-users`.
+
+### Tables
+
+`users` (role, name, email *or* phone, scrypt hash, rider_id / company_id; a check constraint ties each role to the right fields), `companies`, `auth_sessions` (digest, csrf token, expiry), `login_attempts`. The operational tables are `riders`, `sessions`, `decisions`, `stepup_events`, `rider_profiles`, `audit_log`. Only the operational tables are reset in demo mode. There is no migration tool: tables are created with `create_all`, which never alters or drops an existing table.
 
 ## Endpoints
 
@@ -32,8 +60,8 @@ Start-up drops and re-seeds the demo data (`TJ_RESET_ON_START=true`): it creates
 | `POST` | `/lab/scenario` | `{"rider_id", "scenario", "steps": 0..50, "auto_resolve": true}` |
 | `POST` | `/lab/step` | `{"rider_id"?, "count": 1..200, "auto_resolve": true}` |
 | `POST` | `/lab/run` | `{"action": "start"|"stop", "rate": 0.1..100}` background simulation |
-| `POST` | `/lab/reset` | Drop everything and rebuild the world (about 5 s) |
-| `GET` | `/health` | Liveness: `{status, model_version, riders, sessions_scored, lab}` |
+| `POST` | `/lab/reset` | Clear the simulated data and rebuild the world (about 5 s); accounts are kept |
+| `GET` | `/health` | Liveness: `{"status": "ok"}` (public) |
 
 Errors are `{"detail": "..."}` with 404 (unknown rider / decision), 409 (duplicate session, wrong state), 422 (validation), 503 (lab unavailable).
 

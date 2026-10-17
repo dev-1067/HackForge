@@ -20,3 +20,20 @@ class InvalidState(Exception):
 
 class LabUnavailable(Exception):
     """The simulation lab is disabled or not ready."""
+
+
+class AuthError(Exception):
+    """Authentication or authorisation failure. ``status`` is the HTTP status to return."""
+
+    def __init__(self, status: int, detail: str) -> None:
+        super().__init__(detail)
+        self.status = status
+        self.detail = detail
+
+
+class ValidationFailed(Exception):
+    """Input rejected; ``fields`` maps field name to a message a person can act on."""
+
+    def __init__(self, fields: dict[str, str]) -> None:
+        super().__init__("Please check the highlighted fields.")
+        self.fields = fields
