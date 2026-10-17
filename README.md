@@ -106,10 +106,10 @@ This is the exact case in the problem statement ("same city, same old phone, jus
 | Math / ML | **NumPy, SciPy, scikit-learn** | Robust statistics, covariance, isotonic/conformal calibration, evaluation metrics. No deep learning needed, so it is explainable and fast |
 | DB | **PostgreSQL** (start on **SQLite**) | Relational data (rider → sessions → decisions), easy aggregations for the metrics screens. SQLAlchemy makes SQLite → Postgres a one-line change |
 | ORM | **SQLAlchemy 2.x** | One data layer, swap DB with a connection string |
-| Cache / live state | **Redis** (optional; fallback in-process dict) | Millisecond rider-profile lookup, shows the real-time/scale story |
+| Live state | **In-process** (snapshotted to the DB) | The engine scores in about 0.03 ms from memory; Redis was not needed for one worker |
 | Live updates | **Server-Sent Events** (or WebSocket) | Dashboard feed with no polling |
 | Frontend | **React + Vite + TypeScript + Tailwind + Recharts** | Fast to build, good charts, easy deploy |
-| Packaging | **Docker Compose** | One command for Postgres + Redis + API + UI |
+| Packaging | **Docker Compose** | One command for Postgres + API (+ UI) |
 | Tests | **pytest** | Engine correctness and the evaluation harness |
 | Deploy (optional) | Render / Railway / Fly + Vercel | Public demo link for judges |
 
@@ -356,7 +356,7 @@ Plots to ship: recall by attack type, step-up rate by life-event type, detection
 ```
 HackForge/
 ├── README.md                  # this file
-├── docker-compose.yml
+├── docker-compose.yml, Dockerfile
 ├── .env.example
 ├── engine/                    # Dev A
 │   ├── engine.py              # TrustEngine: score_session, step-up / review outcomes
@@ -376,12 +376,12 @@ HackForge/
 │   ├── baselines.py, evaluate.py   # comparison systems + metrics
 │   └── quickstart.py
 ├── api/                       # Dev B
-│   ├── main.py
-│   ├── schemas.py             # Pydantic = the contract
-│   ├── db.py, models.py       # SQLAlchemy
-│   ├── routes/
-│   ├── stream.py              # SSE
-│   └── lab.py                 # live simulation runner
+│   ├── main.py                # routes, SSE, app factory
+│   ├── service.py             # engine + DB + events (TrustService)
+│   ├── lab.py                 # simulated world, scenarios, background runner
+│   ├── models.py, db.py       # SQLAlchemy schema, SQLite / PostgreSQL
+│   ├── schemas.py, settings.py, errors.py, bus.py, asgi.py
+│   └── tests/
 ├── web/                       # Dev C
 │   ├── src/pages/ (Live, Rider, Lab, Tradeoff, Review)
 │   ├── src/components/
@@ -396,7 +396,7 @@ HackForge/
 
 ## 12. Work split for three developers
 
-> **Status:** Dev A's part (engine, simulator, evaluation) is implemented and tested. See [`docs/dev-a.md`](docs/dev-a.md) for the hand-off to Dev B and Dev C.
+> **Status:** Dev A's part (engine, simulator, evaluation) and Dev B's part (API, database, live stream, lab) are implemented and tested. See [`docs/dev-a.md`](docs/dev-a.md) and [`docs/dev-b.md`](docs/dev-b.md) for the hand-offs. Dev C (dashboard) is next.
 
 Keep the contract (sections 7 and 8) frozen after hour 2, so each person can work against mocks.
 
@@ -527,7 +527,7 @@ Sleep in shifts. Never leave the demo path untested for more than 4 hours.
 
 ```bash
 cp .env.example .env
-docker compose up -d                       # postgres + redis
+docker compose up --build                   # postgres + API on :8000 (or: uvicorn api.asgi:app)
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python -m sim.generate --riders 5000 --days 60

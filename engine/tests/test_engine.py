@@ -147,7 +147,7 @@ def test_decision_payload_shape(model):
     payload = engine.score(sessions[0].to_engine_session()).to_dict()
     assert set(payload) == {"session_id", "rider_id", "level", "action", "status", "context_score",
                             "habit_score", "evidence_score", "threshold", "habit_deviation",
-                            "reasons", "model_version"}
+                            "context_flags", "reasons", "model_version"}
     json.dumps(payload)
 
 

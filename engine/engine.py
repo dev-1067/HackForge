@@ -115,7 +115,7 @@ class TrustEngine:
             session_id=session.session_id, rider_id=session.rider_id, level=LEVELS[level],
             action=action, status=state.status, context_score=novelty, habit_score=habit_score,
             evidence_score=state.evidence, threshold=threshold, habit_deviation=habit,
-            reasons=reasons,
+            context_flags=novel_parts, reasons=reasons,
             model_version=MODEL_VERSION)
 
     # ---- outcomes of the escalation ladder ---------------------------------

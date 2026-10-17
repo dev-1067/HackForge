@@ -1,2 +1,4 @@
-# engine/ and sim/ use only the Python 3.10+ standard library.
+-r requirements-api.txt
 pytest>=8
+httpx>=0.27          # FastAPI TestClient
+pyflakes             # lint

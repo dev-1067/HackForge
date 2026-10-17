@@ -79,6 +79,7 @@ class Decision:
     evidence_score: float
     threshold: float
     habit_deviation: float = 0.0
+    context_flags: list[str] = field(default_factory=list)
     reasons: list[dict[str, Any]] = field(default_factory=list)
     model_version: str = ""
 
@@ -98,6 +99,7 @@ class Decision:
             "evidence_score": round(self.evidence_score, 3),
             "threshold": round(self.threshold, 3),
             "habit_deviation": round(self.habit_deviation, 3),
+            "context_flags": self.context_flags,
             "reasons": self.reasons,
             "model_version": self.model_version,
         }
