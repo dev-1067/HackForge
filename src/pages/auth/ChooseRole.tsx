@@ -16,8 +16,8 @@ export const ChooseRole: React.FC = () => (
             to={option.to}
             className="block rounded-lg border border-border px-4 py-3 transition-colors hover:bg-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <span className="block text-sm font-semibold text-foreground">{option.title}</span>
-            <span className="mt-0.5 block text-[13px] text-muted-foreground">{option.text}</span>
+            <span className="block text-app-sm font-semibold text-foreground">{option.title}</span>
+            <span className="mt-0.5 block text-app-13 text-muted-foreground">{option.text}</span>
           </Link>
         </li>
       ))}

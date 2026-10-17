@@ -157,6 +157,50 @@ class LoginAttemptRow(Base):
     success: Mapped[bool] = mapped_column(Boolean)
 
 
+class SignInEventRow(Base):
+    """One successful sign-in. Lets a person see where they are signed in and spot a new browser."""
+
+    __tablename__ = "sign_in_events"
+    __table_args__ = (Index("ix_sign_in_events_user_time", "user_id", "at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"))
+    at: Mapped[datetime] = mapped_column(DateTime)
+    browser_label: Mapped[str] = mapped_column(String(80))          # e.g. "Chrome on Windows"
+    fingerprint: Mapped[str] = mapped_column(String(32))            # digest of the label, to spot a new browser
+    is_new_browser: Mapped[bool] = mapped_column(Boolean, default=False)
+    token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+
+
+REQUEST_KINDS = ("unfamiliar_signin", "verification_help", "legitimate_change", "human_review", "device_change", "other")
+REQUEST_STATUSES = ("open", "in_review", "resolved", "declined")
+
+
+class ReviewRequestRow(Base):
+    """A rider asking for help or a human review, or reporting a device change they recognise."""
+
+    __tablename__ = "review_requests"
+    __table_args__ = (
+        CheckConstraint("kind IN ('unfamiliar_signin','verification_help','legitimate_change','human_review','device_change','other')",
+                        name="ck_review_requests_kind"),
+        CheckConstraint("status IN ('open','in_review','resolved','declined')", name="ck_review_requests_status"),
+        Index("ix_review_requests_status_time", "status", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    rider_id: Mapped[str] = mapped_column(String(64), index=True)   # soft reference, like users.rider_id
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(24))
+    message: Mapped[str] = mapped_column(String(1000))
+    device_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="open")
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+    response_note: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    responded_by: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 # Tables holding simulated / operational data. Accounts and sign-in sessions are never reset.
 DEMO_TABLES = [RiderRow.__table__, SessionRow.__table__, DecisionRow.__table__, StepupRow.__table__,
                ProfileRow.__table__, AuditRow.__table__]

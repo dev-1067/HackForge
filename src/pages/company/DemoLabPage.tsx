@@ -62,7 +62,7 @@ export const DemoLabPage: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <p className="max-w-2xl text-sm text-muted-foreground">
+      <p className="max-w-2xl text-app-sm text-muted-foreground">
         A sandbox of simulated riders. Pick a rider and something that could happen to them, then watch how the system responds.
         Nothing here touches real accounts.
       </p>
@@ -72,17 +72,17 @@ export const DemoLabPage: React.FC = () => {
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Try a scenario" className="lg:col-span-2">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="text-sm">
+            <div className="text-app-sm">
               <label htmlFor="lab-rider" className="mb-1.5 block font-medium text-foreground">Rider</label>
               <select id="lab-rider" value={riderId} onChange={(e) => setRiderId(e.target.value)}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40">
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-app-sm focus:outline-none focus:ring-2 focus:ring-ring/40">
                 {riders.map((r) => <option key={r.rider_id} value={r.rider_id}>{r.name ?? `Rider ${r.rider_id}`}{state?.blocked.includes(r.rider_id) ? ' (blocked)' : ''}</option>)}
               </select>
             </div>
-            <div className="text-sm">
+            <div className="text-app-sm">
               <label htmlFor="lab-scenario" className="mb-1.5 block font-medium text-foreground">What happens</label>
               <select id="lab-scenario" value={scenario} onChange={(e) => setScenario(e.target.value)}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40">
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-app-sm focus:outline-none focus:ring-2 focus:ring-ring/40">
                 <optgroup label="Everyday changes (should be fine)">
                   {scenarios.filter((s) => s.kind === 'life_event').map((s) => <option key={s.name} value={s.name}>{s.title}</option>)}
                 </optgroup>
@@ -92,22 +92,22 @@ export const DemoLabPage: React.FC = () => {
               </select>
             </div>
           </div>
-          {selected && <p className="mt-2 text-[13px] text-muted-foreground">{selected.description}</p>}
-          {blocked && <p className="mt-2 text-[13px] text-amber-700 dark:text-amber-400">This rider is blocked. Starting a new scenario unblocks them.</p>}
+          {selected && <p className="mt-2 text-app-13 text-muted-foreground">{selected.description}</p>}
+          {blocked && <p className="mt-2 text-app-13 text-amber-700 dark:text-amber-400">This rider is blocked. Starting a new scenario unblocks them.</p>}
 
-          <label className="mt-3 flex items-start gap-2 text-sm">
+          <label className="mt-3 flex items-start gap-2 text-app-sm">
             <input type="checkbox" checked={autoAnswer} onChange={(e) => setAutoAnswer(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#0F3B2C]" />
             <span>
               <span className="font-medium text-foreground">Answer extra checks automatically</span>
-              <span className="block text-[13px] text-muted-foreground">Turn this off to deal with them yourself on the Needs review page, or as the rider.</span>
+              <span className="block text-app-13 text-muted-foreground">Turn this off to deal with them yourself on the Needs review page, or as the rider.</span>
             </span>
           </label>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <label className="flex items-center gap-2 text-app-sm text-muted-foreground">
               Show the next
               <select value={steps} onChange={(e) => setSteps(Number(e.target.value))} aria-label="Number of sessions"
-                className="rounded-lg border border-border bg-card px-2 py-1.5 text-sm">
+                className="rounded-lg border border-border bg-card px-2 py-1.5 text-app-sm">
                 {STEP_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
               sessions
@@ -124,11 +124,11 @@ export const DemoLabPage: React.FC = () => {
         </Panel>
 
         <Panel title="Background activity">
-          <p className="text-sm text-muted-foreground">Keep simulated riders working so the dashboard fills up on its own.</p>
-          <label className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+          <p className="text-app-sm text-muted-foreground">Keep simulated riders working so the dashboard fills up on its own.</p>
+          <label className="mt-3 flex items-center gap-2 text-app-sm text-muted-foreground">
             Sessions per second
             <input type="number" min={0.5} max={50} step={0.5} value={rate} onChange={(e) => setRate(Number(e.target.value))}
-              aria-label="Sessions per second" className="w-20 rounded-lg border border-border bg-card px-2 py-1.5 text-sm" />
+              aria-label="Sessions per second" className="w-20 rounded-lg border border-border bg-card px-2 py-1.5 text-app-sm" />
           </label>
           <div className="mt-3 flex items-center gap-2">
             {state?.running ? (
@@ -136,12 +136,12 @@ export const DemoLabPage: React.FC = () => {
             ) : (
               <Button loading={busy === 'start'} onClick={() => void run('start', () => lab.run('start', rate), () => 'Background activity started.')}>Start</Button>
             )}
-            <span className="text-[13px] text-muted-foreground">{state?.running ? 'Running' : 'Stopped'} · {state?.generated ?? 0} sessions so far</span>
+            <span className="text-app-13 text-muted-foreground">{state?.running ? 'Running' : 'Stopped'} · {state?.generated ?? 0} sessions so far</span>
           </div>
           <div className="mt-4 border-t border-border pt-3">
             {confirmReset ? (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Clear all demo data?</span>
+                <span className="text-app-sm text-muted-foreground">Clear all demo data?</span>
                 <Button variant="danger" size="sm" loading={busy === 'reset'}
                   onClick={() => void run('reset', async () => { await lab.reset(); setResults([]); setConfirmReset(false) }, () => 'The demo was reset.')}>Yes, reset</Button>
                 <Button variant="ghost" size="sm" onClick={() => setConfirmReset(false)}>Cancel</Button>
@@ -155,11 +155,11 @@ export const DemoLabPage: React.FC = () => {
 
       {sim && (
         <Panel title="How the system is doing in this demo">
-          <dl className="grid grid-cols-2 gap-4 text-sm lg:grid-cols-4">
-            <div><dt className="text-muted-foreground">Genuine riders asked for a check</dt><dd className="text-lg font-semibold">{pct(sim.false_stepup_rate, 2)}</dd></div>
-            <div><dt className="text-muted-foreground">Genuine riders put on hold</dt><dd className="text-lg font-semibold">{pct(sim.false_lockout_rate, 2)}</dd></div>
-            <div><dt className="text-muted-foreground">Account sharing caught</dt><dd className="text-lg font-semibold">{sim.impostor_accounts_flagged} of {sim.impostor_accounts}</dd></div>
-            <div><dt className="text-muted-foreground">Sessions until it was noticed</dt><dd className="text-lg font-semibold">{sim.median_sessions_to_detect ?? '—'}</dd></div>
+          <dl className="grid grid-cols-2 gap-4 text-app-sm lg:grid-cols-4">
+            <div><dt className="text-muted-foreground">Genuine riders asked for a check</dt><dd className="text-app-lg font-semibold">{pct(sim.false_stepup_rate, 2)}</dd></div>
+            <div><dt className="text-muted-foreground">Genuine riders put on hold</dt><dd className="text-app-lg font-semibold">{pct(sim.false_lockout_rate, 2)}</dd></div>
+            <div><dt className="text-muted-foreground">Account sharing caught</dt><dd className="text-app-lg font-semibold">{sim.impostor_accounts_flagged} of {sim.impostor_accounts}</dd></div>
+            <div><dt className="text-muted-foreground">Sessions until it was noticed</dt><dd className="text-app-lg font-semibold">{sim.median_sessions_to_detect ?? '—'}</dd></div>
           </dl>
         </Panel>
       )}

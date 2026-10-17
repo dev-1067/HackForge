@@ -11,14 +11,15 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from . import portal
+from . import partner, portal
 from .auth import AuthContext, AuthService
 from .deps import (COOKIE_NAME, any_user, company_user, current_context, ingest_access, rider_user)
 from .errors import (AuthError, DuplicateSession, InvalidState, LabUnavailable, UnknownDecision, UnknownRider,
                      ValidationFailed)
 from .lab import Lab
-from .schemas import (CompanyLoginIn, CompanyRegisterIn, DecisionOut, LabRunIn, LabScenarioIn, LabStepIn,
-                      ReviewIn, RiderLoginIn, RiderRegisterIn, SessionIn, StepupIn, VerificationIn)
+from .schemas import (CompanyLoginIn, CompanyRegisterIn, DecisionOut, DeviceChangeIn, LabRunIn, LabScenarioIn,
+                      LabStepIn, PasswordIn, RequestIn, RespondIn, ReviewIn, RiderLoginIn, RiderRegisterIn,
+                      SessionIn, StepupIn, VerificationIn)
 from .seed import seed_demo_accounts
 from .service import TrustService
 from .settings import Settings
@@ -78,30 +79,31 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
         return {"status": "ok"}
 
     # ------------------------------------------------------------------ accounts
-    def start_session(response: Response, user) -> dict[str, Any]:
+    def start_session(request: Request, response: Response, user) -> dict[str, Any]:
         token, ctx, expires = auth.create_session(user)
+        auth.record_sign_in(user.user_id, token, request.headers.get("user-agent"))
         response.set_cookie(COOKIE_NAME, token, httponly=True, samesite="lax", secure=settings.cookie_secure,
                             max_age=int((expires - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds()),
                             path="/")
         return {"user": ctx.public(), "csrf_token": ctx.csrf_token, "home": HOME_FOR_ROLE[ctx.role]}
 
     @app.post("/auth/rider/register", status_code=201, tags=["accounts"])
-    def rider_register(body: RiderRegisterIn, response: Response) -> dict[str, Any]:
+    def rider_register(body: RiderRegisterIn, request: Request, response: Response) -> dict[str, Any]:
         """Create a delivery rider account and sign in."""
-        return start_session(response, auth.register_rider(body.name, body.phone, body.password))
+        return start_session(request, response, auth.register_rider(body.name, body.phone, body.password))
 
     @app.post("/auth/rider/login", tags=["accounts"])
-    def rider_login(body: RiderLoginIn, response: Response) -> dict[str, Any]:
-        return start_session(response, auth.login("rider", body.phone, body.password))
+    def rider_login(body: RiderLoginIn, request: Request, response: Response) -> dict[str, Any]:
+        return start_session(request, response, auth.login("rider", body.phone, body.password))
 
     @app.post("/auth/company/register", status_code=201, tags=["accounts"])
-    def company_register(body: CompanyRegisterIn, response: Response) -> dict[str, Any]:
+    def company_register(body: CompanyRegisterIn, request: Request, response: Response) -> dict[str, Any]:
         """Create an operations-team account. Needs the company invite code."""
-        return start_session(response, auth.register_company_user(body.name, body.email, body.password, body.invite_code))
+        return start_session(request, response, auth.register_company_user(body.name, body.email, body.password, body.invite_code))
 
     @app.post("/auth/company/login", tags=["accounts"])
-    def company_login(body: CompanyLoginIn, response: Response) -> dict[str, Any]:
-        return start_session(response, auth.login("company", body.email, body.password))
+    def company_login(body: CompanyLoginIn, request: Request, response: Response) -> dict[str, Any]:
+        return start_session(request, response, auth.login("company", body.email, body.password))
 
     @app.post("/auth/logout", tags=["accounts"])
     def logout(request: Request, response: Response, _ctx: AuthContext = Depends(any_user)) -> dict[str, str]:
@@ -127,6 +129,54 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     def my_verification(body: VerificationIn, ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
         """Answer an extra-check request: ``confirmed=true`` ("it is me") or false ("that was not me")."""
         return portal.submit_verification(svc, ctx, body.confirmed)
+
+
+    @app.get("/me/rider/activity", tags=["rider portal"])
+    def my_activity(limit: int = Query(40, ge=1, le=100), ctx: AuthContext = Depends(rider_user)) -> list[dict[str, Any]]:
+        """Sign-ins, new phones, verification and request events for this rider, newest first."""
+        return partner.activity_timeline(svc, ctx, limit)
+
+    @app.get("/me/rider/account", tags=["rider portal"])
+    def my_account_page(ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
+        """Account & Verification: profile, status, devices, verification history, a short check-up."""
+        return partner.account_overview(svc, ctx)
+
+    @app.post("/me/rider/device-change", status_code=201, tags=["rider portal"])
+    def my_device_change(body: DeviceChangeIn, ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
+        """Tell the team that a device we saw is yours. Recorded for review; it does not change any check."""
+        return partner.report_device_change(svc, ctx, body.device_id, body.note)
+
+    @app.get("/me/rider/requests", tags=["rider portal"])
+    def my_requests(ctx: AuthContext = Depends(rider_user)) -> list[dict[str, Any]]:
+        return partner.list_requests(svc, ctx)
+
+    @app.post("/me/rider/requests", status_code=201, tags=["rider portal"])
+    def my_new_request(body: RequestIn, ctx: AuthContext = Depends(rider_user)) -> dict[str, Any]:
+        """Ask for help or a human review."""
+        return partner.create_request(svc, ctx, body.kind, body.message, body.device_id)
+
+    @app.get("/me/rider/export", tags=["rider portal"])
+    def my_export(ctx: AuthContext = Depends(rider_user)) -> JSONResponse:
+        """Download the rider's own data as JSON."""
+        return JSONResponse(partner.export_data(svc, ctx), headers={
+            "Content-Disposition": 'attachment; filename="trust-juggler-my-data.json"'})
+
+    # ------------------------------------------------------------------ any signed-in user
+    @app.get("/me/sessions", tags=["accounts"])
+    def my_sessions(request: Request, ctx: AuthContext = Depends(any_user)) -> list[dict[str, Any]]:
+        """Where this account is signed in right now."""
+        return auth.active_sessions(ctx.user_id, request.cookies.get(COOKIE_NAME))
+
+    @app.post("/me/sessions/sign-out-others", tags=["accounts"])
+    def sign_out_others(request: Request, ctx: AuthContext = Depends(any_user)) -> dict[str, int]:
+        return {"signed_out": auth.revoke_other_sessions(ctx.user_id, request.cookies.get(COOKIE_NAME))}
+
+    @app.post("/me/password", tags=["accounts"])
+    def change_password(body: PasswordIn, request: Request, ctx: AuthContext = Depends(any_user)) -> dict[str, int]:
+        """Change the password (needs the current one). Every other session is signed out."""
+        others = auth.change_password(ctx.user_id, body.current_password, body.new_password,
+                                      request.cookies.get(COOKIE_NAME))
+        return {"signed_out_elsewhere": others}
 
     # ------------------------------------------------------------------ scoring input
     @app.post("/sessions/score", response_model=DecisionOut, tags=["scoring"], dependencies=[Depends(ingest_access)])
@@ -180,6 +230,18 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     def review_decision(decision_id: int, body: ReviewIn, ctx: AuthContext = Depends(company_user)) -> dict[str, Any]:
         """A reviewer's verdict: confirm a takeover (suspend) or dismiss (clear the account)."""
         return svc.review_decision(decision_id, body.takeover_confirmed, reviewer=ctx.name, note=body.note)
+
+
+    @ops.get("/review-requests", tags=["rider requests"])
+    def review_requests(status: str | None = Query(None, pattern="^(active|open|in_review|resolved|declined)$"),
+                        rider_id: str | None = None, limit: int = Query(100, ge=1, le=300)) -> list[dict[str, Any]]:
+        """Help and review requests from riders. ``status=active`` is open plus in review."""
+        return partner.company_requests(svc, status, rider_id, limit)
+
+    @ops.post("/review-requests/{request_id}/respond", tags=["rider requests"])
+    def respond_request(request_id: int, body: RespondIn, ctx: AuthContext = Depends(company_user)) -> dict[str, Any]:
+        """Start reviewing, resolve or decline a request. A reply is required to resolve or decline."""
+        return partner.respond_to_request(svc, request_id, body.action, body.note, ctx.name)
 
     @ops.get("/audit", tags=["decisions"])
     def audit(limit: int = Query(100, ge=1, le=1000)) -> list[dict[str, Any]]:

@@ -136,7 +136,13 @@ export function auditSentence(entry: { action: string; actor: string; details: R
     case 'review_confirmed_takeover': return `Suspended the account after review.${note}`
     case 'stepup_passed': return 'The rider passed the extra check.'
     case 'stepup_failed': return 'The rider did not pass the extra check; payouts were held.'
-    default: return entry.action.replace(/_/g, ' ')
+    case 'request_start_review': return 'Started reviewing a rider request.'
+    case 'request_resolve': return `Resolved a rider request.${note}`
+    case 'request_decline': return `Closed a rider request without changes.${note}`
+    case 'request_device_change': return 'The rider said a phone is theirs.'
+    default:
+      if (entry.action.startsWith('request_')) return 'The rider sent a request.'
+      return entry.action.replace(/_/g, ' ')
   }
 }
 

@@ -1,5 +1,6 @@
 import { API_BASE, request } from './http'
 import type {
+  AccountOverview, ActiveSession, ActivityEvent, HelpRequest, TeamRequest,
   AuditEntry, CompareData, Decision, LabState, MetricsSummary, RiderDetail, RiderListItem, RiderOverview,
   Scenario, Session, TimelineItem,
 } from '@/types/api'
@@ -26,6 +27,21 @@ export const auth = {
 export const rider = {
   overview: () => request<RiderOverview>('/me/rider'),
   verify: (confirmed: boolean) => request<RiderOverview>('/me/rider/verification', { method: 'POST', body: { confirmed } }),
+  activity: (limit = 60) => request<ActivityEvent[]>(`/me/rider/activity?limit=${limit}`),
+  account: () => request<AccountOverview>('/me/rider/account'),
+  reportDevice: (device_id: string, note?: string) =>
+    request<HelpRequest>('/me/rider/device-change', { method: 'POST', body: { device_id, note: note || undefined } }),
+  requests: () => request<HelpRequest[]>('/me/rider/requests'),
+  sendRequest: (kind: string, message: string, device_id?: string) =>
+    request<HelpRequest>('/me/rider/requests', { method: 'POST', body: { kind, message, device_id: device_id || undefined } }),
+  exportData: () => request<Record<string, unknown>>('/me/rider/export'),
+}
+
+export const account = {
+  sessions: () => request<ActiveSession[]>('/me/sessions'),
+  signOutOthers: () => request<{ signed_out: number }>('/me/sessions/sign-out-others', { method: 'POST' }),
+  changePassword: (current_password: string, new_password: string) =>
+    request<{ signed_out_elsewhere: number }>('/me/password', { method: 'POST', body: { current_password, new_password } }),
 }
 
 export const ops = {
@@ -44,6 +60,10 @@ export const ops = {
   timeline: (id: string, limit = 120) => request<TimelineItem[]>(`/riders/${encodeURIComponent(id)}/timeline?limit=${limit}`),
   riderAudit: (id: string) => request<AuditEntry[]>(`/riders/${encodeURIComponent(id)}/audit`),
   audit: (limit = 200) => request<AuditEntry[]>(`/audit?limit=${limit}`),
+  requests: (params: { status?: string; rider_id?: string } = {}) =>
+    request<TeamRequest[]>(`/review-requests?${qs(params)}`),
+  respond: (id: number, action: 'start_review' | 'resolve' | 'decline', note?: string) =>
+    request<HelpRequest>(`/review-requests/${id}/respond`, { method: 'POST', body: { action, note: note || undefined } }),
 }
 
 export const lab = {
@@ -75,7 +95,7 @@ export function openStream(handlers: {
       /* ignore a malformed event */
     }
   })
-  for (const name of ['stepup', 'review', 'lab']) {
+  for (const name of ['stepup', 'review', 'lab', 'request']) {
     source.addEventListener(name, () => handlers.onEvent?.(name))
   }
   return () => source.close()

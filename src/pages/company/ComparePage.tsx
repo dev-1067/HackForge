@@ -43,16 +43,16 @@ export const ComparePage: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <p className="max-w-2xl text-sm text-muted-foreground">
+      <p className="max-w-2xl text-app-sm text-muted-foreground">
         Four ways to protect accounts, tested on the same simulated riders that the system had never seen before.
         A good approach catches account sharing without bothering genuine riders.
       </p>
 
       <Panel title="Results" flush>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
+          <table className="w-full min-w-[620px] text-left text-app-sm">
             <thead>
-              <tr className="border-b border-border text-[13px] text-muted-foreground">
+              <tr className="border-b border-border text-app-13 text-muted-foreground">
                 <th className="px-4 py-2 font-medium">Approach</th>
                 <th className="px-4 py-2 font-medium">Account sharing caught</th>
                 <th className="px-4 py-2 font-medium">Genuine sessions asked for a check</th>
@@ -64,7 +64,7 @@ export const ComparePage: React.FC = () => {
                 const s = data.systems[k]
                 return (
                   <tr key={k} className={k === 'trust_juggler' ? 'bg-secondary/40' : ''}>
-                    <td className="px-4 py-2"><span className="font-medium text-foreground">{NAMES[k].name}</span><span className="block text-[13px] text-muted-foreground">{NAMES[k].text}</span></td>
+                    <td className="px-4 py-2"><span className="font-medium text-foreground">{NAMES[k].name}</span><span className="block text-app-13 text-muted-foreground">{NAMES[k].text}</span></td>
                     <td className="px-4 py-2 font-medium">{pct(s.takeover_recall_14d)}</td>
                     <td className="px-4 py-2 font-medium">{pct(s.false_stepup_rate, 2)}</td>
                     <td className="px-4 py-2">{s.detection_latency_sessions.median ?? '—'}</td>
@@ -107,7 +107,7 @@ export const ComparePage: React.FC = () => {
           </div>
         </Panel>
       </div>
-      <p className="text-[13px] text-muted-foreground">Results come from simulated riders, not real accounts.</p>
+      <p className="text-app-13 text-muted-foreground">Results come from simulated riders, not real accounts.</p>
     </div>
   )
 }

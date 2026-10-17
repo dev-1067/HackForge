@@ -129,3 +129,21 @@ With `auto_resolve: true` (default) the lab plays the rider and reviewer: owners
 Tested: all of the above against SQLite (in memory and file) and against a real PostgreSQL 16 server, including restart/restore, a real uvicorn server with `curl` on `/stream`, and concurrent scoring from several threads.
 
 Untested: `docker build` / `docker compose up` (no Docker daemon in the build environment; `docker compose config` validates). No authentication: put the API behind your own gateway before exposing it. Timestamps are treated as rider-local time.
+
+## Delivery partner portal (endpoints and tables)
+
+Partner pages: Recent Activity `/rider`, Account & Verification `/rider/account`, Help & Review `/rider/help`, Settings `/rider/settings`. All partner endpoints act only on the signed-in rider's own record (the rider id comes from the session, never from the request).
+
+| Endpoint | Who | Purpose |
+|---|---|---|
+| `GET /me/rider/activity` | rider | recorded sign-ins, new phones, verification events, requests and replies (`origin`: recorded or demo) |
+| `GET /me/rider/account` | rider | profile (phone masked), status, phones, outstanding verification, check-up |
+| `POST /me/rider/device-change` | rider | "This is my phone" note; changes nothing in the engine, 409 if already reported |
+| `GET/POST /me/rider/requests` | rider | help and review requests (message 10–1000 chars, max 5 open) |
+| `GET /me/rider/export` | rider | download own data as JSON (no secrets) |
+| `GET /me/sessions`, `POST /me/sessions/sign-out-others`, `POST /me/password` | any user | settings |
+| `GET /review-requests`, `POST /review-requests/{id}/respond` | company | rider requests in Needs review; reply required to resolve/close |
+
+New tables `sign_in_events` and `review_requests` are created automatically by `create_all` on start-up (no change to existing tables) and are not cleared by the demo reset.
+
+The end-to-end check (`e2e/smoke.cjs`) should be run against a freshly started backend.

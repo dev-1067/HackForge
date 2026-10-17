@@ -16,7 +16,7 @@ from engine.profile import ESCALATED_STATUSES, STATUS_PENDING
 from .bus import EventBus
 from .db import Database
 from .errors import DuplicateSession, InvalidState, UnknownDecision, UnknownRider
-from .models import AuditRow, DecisionRow, ProfileRow, RiderRow, SessionRow, StepupRow, UserRow
+from .models import AuditRow, DecisionRow, ProfileRow, ReviewRequestRow, RiderRow, SessionRow, StepupRow, UserRow
 from .settings import Settings
 
 LEVELS = ("L0", "L1", "L2", "L3", "L4")
@@ -333,6 +333,8 @@ class TrustService:
                     DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None))) or 0,
                 "open_cases": db.scalar(select(func.count(func.distinct(DecisionRow.rider_id))).where(
                     DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None))) or 0,
+                "open_requests": db.scalar(select(func.count()).select_from(ReviewRequestRow).where(
+                    ReviewRequestRow.status.in_(("open", "in_review")))) or 0,
                 "open_stepups": db.scalar(select(func.count()).select_from(StepupRow).where(
                     StepupRow.result == "pending")) or 0,
                 "model_version": MODEL_VERSION,

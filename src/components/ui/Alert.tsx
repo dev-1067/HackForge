@@ -11,7 +11,7 @@ const TONES = {
 export const Alert: React.FC<{ tone?: keyof typeof TONES; children: React.ReactNode; className?: string }> = ({
   tone = 'info', children, className,
 }) => (
-  <div role={tone === 'error' ? 'alert' : 'status'} className={cn('rounded-lg border px-3.5 py-2.5 text-sm', TONES[tone], className)}>
+  <div role={tone === 'error' ? 'alert' : 'status'} className={cn('rounded-lg border px-3.5 py-2.5 text-app-sm', TONES[tone], className)}>
     {children}
   </div>
 )

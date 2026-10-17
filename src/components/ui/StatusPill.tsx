@@ -11,7 +11,7 @@ const DOT: Record<Tone, string> = {
 
 /** A small dot and a word. The dot colour is the only decoration. */
 export const StatusPill: React.FC<{ tone: Tone; children: React.ReactNode; className?: string }> = ({ tone, children, className }) => (
-  <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium text-foreground', className)}>
+  <span className={cn('inline-flex items-center gap-1.5 whitespace-nowrap text-app-13 font-medium text-foreground', className)}>
     <span className={cn('h-2 w-2 rounded-full', DOT[tone])} aria-hidden="true" />
     {children}
   </span>

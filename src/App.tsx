@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/hooks/useTheme'
+import { PreferencesProvider } from '@/hooks/usePreferences'
 import { AuthProvider } from '@/auth/AuthContext'
 import { RequireRole } from '@/auth/RequireRole'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -17,11 +18,16 @@ import { HistoryPage } from '@/pages/company/HistoryPage'
 import { NeedsReviewPage } from '@/pages/company/NeedsReviewPage'
 import { RiderDetailPage } from '@/pages/company/RiderDetailPage'
 import { RidersPage } from '@/pages/company/RidersPage'
-import { RiderHome } from '@/pages/rider/RiderHome'
+import { AccountPage } from '@/pages/rider/AccountPage'
+import { HelpPage } from '@/pages/rider/HelpPage'
+import { RecentActivityPage } from '@/pages/rider/RecentActivityPage'
+import { RiderLayout } from '@/pages/rider/RiderLayout'
+import { SettingsPage } from '@/pages/shared/SettingsPage'
 
 export function App() {
   return (
     <ThemeProvider>
+      <PreferencesProvider>
       <BrowserRouter>
         <AuthProvider>
           <Routes>
@@ -34,7 +40,13 @@ export function App() {
             <Route path="/company/register" element={<CompanyRegister />} />
 
             {/* Delivery rider */}
-            <Route path="/rider" element={<RequireRole role="rider"><RiderHome /></RequireRole>} />
+            <Route path="/rider" element={<RequireRole role="rider"><RiderLayout /></RequireRole>}>
+              <Route index element={<RecentActivityPage />} />
+              <Route path="account" element={<AccountPage />} />
+              <Route path="help" element={<HelpPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/rider" replace />} />
+            </Route>
 
             {/* Company operations */}
             <Route element={<RequireRole role="company"><AppLayout /></RequireRole>}>
@@ -45,6 +57,7 @@ export function App() {
               <Route path="/audit" element={<HistoryPage />} />
               <Route path="/simulation" element={<DemoLabPage />} />
               <Route path="/analytics" element={<ComparePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
 
             {/* Older links */}
@@ -58,6 +71,7 @@ export function App() {
           </Routes>
         </AuthProvider>
       </BrowserRouter>
+      </PreferencesProvider>
     </ThemeProvider>
   )
 }

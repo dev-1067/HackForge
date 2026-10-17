@@ -20,7 +20,7 @@ export const TrendChart: React.FC<{ data: TrendPoint[]; height?: number }> = ({ 
   const top = Math.max(line * 1.6, ...data.map((p) => p.change), 1)
 
   if (data.length < 2) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">More activity is needed before a trend can be drawn.</p>
+    return <p className="py-10 text-center text-app-sm text-muted-foreground">More activity is needed before a trend can be drawn.</p>
   }
   return (
     <div style={{ height }} role="img" aria-label="Chart of how different recent activity is from usual">
@@ -37,7 +37,7 @@ export const TrendChart: React.FC<{ data: TrendPoint[]; height?: number }> = ({ 
               if (!active || !payload?.length) return null
               const p = payload[0].payload as TrendPoint
               return (
-                <div className="rounded-lg border border-border bg-card px-3 py-2 text-[13px] shadow-sm">
+                <div className="rounded-lg border border-border bg-card px-3 py-2 text-app-13 shadow-sm">
                   <div className="font-medium text-foreground">{p.label}</div>
                   {p.detail && <div className="text-muted-foreground">{p.detail}</div>}
                 </div>

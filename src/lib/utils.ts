@@ -1,5 +1,14 @@
 import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { extendTailwindMerge } from 'tailwind-merge'
+
+// Teach the class merger about the app font sizes so `text-app-sm` and `text-muted-foreground` can coexist.
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      'font-size': [{ text: ['app-xs', 'app-13', 'app-sm', 'app-15', 'app-base', 'app-lg', 'app-xl', 'app-2xl'] }],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
