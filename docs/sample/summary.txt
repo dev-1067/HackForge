@@ -1,0 +1,37 @@
+
+Dataset: {'riders': 2000, 'sessions': 171662, 'test_riders': 1000, 'test_sessions': 85827}
+Calibration: {'h2': 3.124, 'alpha': 0.005, 'calibration_riders': 471, 'calibration_sessions': 37425, 'calibration_stepups': 185, 'calibration_stepup_rate': 0.00494}
+Speed: {'sessions_scored': 20000, 'sessions_per_second': 31847, 'latency_ms_p50': 0.029, 'latency_ms_p95': 0.041}
+
+system            false step-up  false lockout  recall 14d  median sessions  median hours
+-----------------------------------------------------------------------------------------
+trust_juggler            0.0042         0.0000       0.969              3.0          26.3
+naive_anomaly            0.0049         0.0000       0.842              1.0           0.0
+strict_gate              0.0071         0.0000       0.342              1.0           0.0
+open_gate                0.0000         0.0000       0.000             None          None
+
+Share of riders asked for a selfie check within 21 days (background = riders with no event):
+  trust_juggler    ordinary life events 0.054   background 0.053
+  naive_anomaly    ordinary life events 0.158   background 0.142
+  strict_gate      ordinary life events 0.651   background 0.002
+  open_gate        ordinary life events 0.000   background 0.000
+
+Trust Juggler by life event (rider friction rate / session friction rate):
+  new_phone            0.051  0.0040   (n=39)
+  os_update            0.000  0.0000   (n=38)
+  moved_city           0.044  0.0020   (n=45)
+  new_zone             0.135  0.0053   (n=37)
+  vacation_gap         0.065  0.0058   (n=46)
+  illness_slowdown     0.471  0.0313   (n=34)
+  schedule_change      0.568  0.0299   (n=37)
+  network_change       0.028  0.0016   (n=36)
+
+Trust Juggler by attack (recall / median sessions / median hours):
+  hard_handoff         1.000     3.0     40.9   (n=28)
+  gradual_sharing      0.927     3.0     43.8   (n=41)
+  timeshare_rental     1.000     2.0     22.5   (n=29)
+  credential_theft     0.927     3.0     22.0   (n=41)
+  slow_drift           1.000     6.0     94.0   (n=31)
+  fleet_farming        1.000     2.0      2.3   (n=26)
+
+Wrote metrics.json, compare.json, model.json to docs/sample/

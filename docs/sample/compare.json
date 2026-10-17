@@ -1,0 +1,107 @@
+{
+  "systems": {
+    "trust_juggler": {
+      "false_stepup_rate": 0.00415,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.96939,
+      "detection_latency_sessions": {
+        "median": 3.0,
+        "p90": 8.0
+      },
+      "detection_latency_hours": {
+        "median": 26.3,
+        "p90": 138.0
+      }
+    },
+    "naive_anomaly": {
+      "false_stepup_rate": 0.00492,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.84184,
+      "detection_latency_sessions": {
+        "median": 1.0,
+        "p90": 6.0
+      },
+      "detection_latency_hours": {
+        "median": 0.0,
+        "p90": 93.8
+      }
+    },
+    "strict_gate": {
+      "false_stepup_rate": 0.00709,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.34184,
+      "detection_latency_sessions": {
+        "median": 1.0,
+        "p90": 1.0
+      },
+      "detection_latency_hours": {
+        "median": 0.0,
+        "p90": 0.0
+      }
+    },
+    "open_gate": {
+      "false_stepup_rate": 0.0,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.0,
+      "detection_latency_sessions": {
+        "median": null,
+        "p90": null
+      },
+      "detection_latency_hours": {
+        "median": null,
+        "p90": null
+      }
+    }
+  },
+  "tradeoff_curve": [
+    {
+      "threshold_multiplier": 0.5,
+      "false_stepup_rate": 0.18046,
+      "false_lockout_rate": 0.0004,
+      "takeover_recall_14d": 1.0,
+      "median_sessions_to_detect": 1.0
+    },
+    {
+      "threshold_multiplier": 0.75,
+      "false_stepup_rate": 0.03843,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 1.0,
+      "median_sessions_to_detect": 2.0
+    },
+    {
+      "threshold_multiplier": 1.0,
+      "false_stepup_rate": 0.00415,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.96939,
+      "median_sessions_to_detect": 3.0
+    },
+    {
+      "threshold_multiplier": 1.5,
+      "false_stepup_rate": 0.00016,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.85714,
+      "median_sessions_to_detect": 4.0
+    },
+    {
+      "threshold_multiplier": 2.0,
+      "false_stepup_rate": 0.0,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.71429,
+      "median_sessions_to_detect": 6.0
+    },
+    {
+      "threshold_multiplier": 3.0,
+      "false_stepup_rate": 0.0,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.35714,
+      "median_sessions_to_detect": 8.0
+    },
+    {
+      "threshold_multiplier": 4.0,
+      "false_stepup_rate": 0.0,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.13776,
+      "median_sessions_to_detect": 10.0
+    }
+  ]
+}

@@ -1,0 +1,411 @@
+{
+  "model_version": "tj-1.0",
+  "config": {
+    "ewma_lambda": 0.25,
+    "z_cap": 4.0,
+    "k": 1.8,
+    "null_level": 1.2,
+    "h2": 3.1243164062499997,
+    "h3_mult": 2.5,
+    "h4_mult": 4.0,
+    "watch_frac": 0.5,
+    "context_boost": 0.25,
+    "min_sessions": 6,
+    "n0": 2.0,
+    "min_rate": 0.04,
+    "key_n0": 1.5,
+    "env_inflate": 3.0,
+    "zone_inflate": 2.0,
+    "device_inflate": 4.0,
+    "max_keys": 8,
+    "recent_len": 6,
+    "absorb_rate": 0.25,
+    "w_persona": 1.5,
+    "w_hour": 1.2,
+    "w_environment": 1.0,
+    "w_device": 1.0,
+    "c_device": 0.4,
+    "c_city": 0.25,
+    "c_zone": 0.1,
+    "c_asn": 0.1,
+    "c_network": 0.05,
+    "c_os": 0.1,
+    "c_shared_device": 0.3,
+    "shared_device_riders": 3,
+    "alpha": 0.005
+  },
+  "priors": {
+    "default": {
+      "accept_latency_ms": {
+        "mean": 7.392655782638871,
+        "within_var": 0.048845957976520915,
+        "between_var": 0.07740409845363619
+      },
+      "idle_gap_min": {
+        "mean": 2.1707514922971707,
+        "within_var": 0.09130572697017261,
+        "between_var": 0.19820047932698723
+      },
+      "cancel_rate": {
+        "mean": 0.046653684751352065,
+        "within_var": 0.0003138505972150363,
+        "between_var": 0.0005071199712345217
+      },
+      "accept_rate": {
+        "mean": 0.8430166225874753,
+        "within_var": 0.0020447091698865966,
+        "between_var": 0.005121062014001063
+      },
+      "login_hour": {
+        "mean": 18.23011462881029,
+        "within_var": 3.9430067737142034,
+        "between_var": 56.04355307227527
+      },
+      "avg_speed_kmh": {
+        "mean": 25.048960275501187,
+        "within_var": 4.691749051316338,
+        "between_var": 98.66340042079524
+      },
+      "route_deviation": {
+        "mean": 0.12446266359422678,
+        "within_var": 0.0011802899819032286,
+        "between_var": 0.0024714819283407482
+      },
+      "orders_per_hour": {
+        "mean": 0.6712777150522669,
+        "within_var": 0.031873339951071056,
+        "between_var": 0.052877122319257924
+      },
+      "tap_interval_ms": {
+        "mean": 5.420204868945643,
+        "within_var": 0.010299365684138993,
+        "between_var": 0.02316876204250453
+      },
+      "swipe_speed": {
+        "mean": 0.5625317026737772,
+        "within_var": 0.0024871033625882173,
+        "between_var": 0.00485030250682749
+      }
+    },
+    "scooter_night": {
+      "accept_latency_ms": {
+        "mean": 7.210312362116206,
+        "within_var": 0.051111088910236635,
+        "between_var": 0.06368062366519717
+      },
+      "idle_gap_min": {
+        "mean": 1.688223485436669,
+        "within_var": 0.08431590621396057,
+        "between_var": 0.11998106294025214
+      },
+      "cancel_rate": {
+        "mean": 0.07063243340325566,
+        "within_var": 0.00031236787761898066,
+        "between_var": 0.00048320025951173934
+      },
+      "accept_rate": {
+        "mean": 0.8120379218971843,
+        "within_var": 0.0020579209939686387,
+        "between_var": 0.003952867737760245
+      },
+      "login_hour": {
+        "mean": 23.629886920178492,
+        "within_var": 3.1693235448413573,
+        "between_var": 2.018524391159688
+      },
+      "avg_speed_kmh": {
+        "mean": 27.00476677863358,
+        "within_var": 4.770374776407168,
+        "between_var": 9.351551548356065
+      },
+      "route_deviation": {
+        "mean": 0.17015566059765885,
+        "within_var": 0.001138884260767357,
+        "between_var": 0.00208245287304645
+      },
+      "orders_per_hour": {
+        "mean": 0.8949124520792331,
+        "within_var": 0.03283654827157285,
+        "between_var": 0.030770251615626302
+      },
+      "tap_interval_ms": {
+        "mean": 5.288848255996489,
+        "within_var": 0.009722331839620534,
+        "between_var": 0.022455958208943003
+      },
+      "swipe_speed": {
+        "mean": 0.6201872672418445,
+        "within_var": 0.0027169557257422845,
+        "between_var": 0.005334239305226768
+      }
+    },
+    "scooter_day": {
+      "accept_latency_ms": {
+        "mean": 7.295026887693222,
+        "within_var": 0.047928983439518784,
+        "between_var": 0.04797687325935288
+      },
+      "idle_gap_min": {
+        "mean": 1.9385043939298212,
+        "within_var": 0.09014766365030258,
+        "between_var": 0.07914859297233566
+      },
+      "cancel_rate": {
+        "mean": 0.04764893235315665,
+        "within_var": 0.0002851993215482502,
+        "between_var": 0.0003636197341451245
+      },
+      "accept_rate": {
+        "mean": 0.8182665414922703,
+        "within_var": 0.0025202271469919922,
+        "between_var": 0.003100525482227259
+      },
+      "login_hour": {
+        "mean": 15.276533936325707,
+        "within_var": 3.789448119772992,
+        "between_var": 3.7043952271762235
+      },
+      "avg_speed_kmh": {
+        "mean": 23.87913407471597,
+        "within_var": 5.3195268341148845,
+        "between_var": 6.4009353116567
+      },
+      "route_deviation": {
+        "mean": 0.14855350906632264,
+        "within_var": 0.0013480779763944293,
+        "between_var": 0.0020155938127512135
+      },
+      "orders_per_hour": {
+        "mean": 0.7614769666965169,
+        "within_var": 0.03116994486355069,
+        "between_var": 0.03218695776196118
+      },
+      "tap_interval_ms": {
+        "mean": 5.3711288349685535,
+        "within_var": 0.010685534183426748,
+        "between_var": 0.017595348845360622
+      },
+      "swipe_speed": {
+        "mean": 0.585528260988161,
+        "within_var": 0.0024149805414999553,
+        "between_var": 0.0033194407245353097
+      }
+    },
+    "car_day": {
+      "accept_latency_ms": {
+        "mean": 7.584391145614588,
+        "within_var": 0.04833831838211067,
+        "between_var": 0.06896653039356719
+      },
+      "idle_gap_min": {
+        "mean": 2.399997040396623,
+        "within_var": 0.10070615283306635,
+        "between_var": 0.1424552001839917
+      },
+      "cancel_rate": {
+        "mean": 0.0354522842300754,
+        "within_var": 0.00032227533156890895,
+        "between_var": 0.00023010109886505343
+      },
+      "accept_rate": {
+        "mean": 0.8757935506550958,
+        "within_var": 0.001945343113500943,
+        "between_var": 0.0027173739194169527
+      },
+      "login_hour": {
+        "mean": 11.796791975449965,
+        "within_var": 5.518352771355654,
+        "between_var": 4.719177789803076
+      },
+      "avg_speed_kmh": {
+        "mean": 31.015855136893563,
+        "within_var": 4.6244782569470475,
+        "between_var": 6.251896064676336
+      },
+      "route_deviation": {
+        "mean": 0.10022994803846089,
+        "within_var": 0.0011002123646553696,
+        "between_var": 0.0009272168829110858
+      },
+      "orders_per_hour": {
+        "mean": 0.5964495257186248,
+        "within_var": 0.030052452612483817,
+        "between_var": 0.025677480355953446
+      },
+      "tap_interval_ms": {
+        "mean": 5.5039915596372655,
+        "within_var": 0.010537082972011292,
+        "between_var": 0.012809788163157728
+      },
+      "swipe_speed": {
+        "mean": 0.491348284263491,
+        "within_var": 0.0024321132815986277,
+        "between_var": 0.003981509560034162
+      }
+    },
+    "car_night": {
+      "accept_latency_ms": {
+        "mean": 7.539418286353619,
+        "within_var": 0.04984217310695262,
+        "between_var": 0.04535585023646548
+      },
+      "idle_gap_min": {
+        "mean": 2.3108600386943268,
+        "within_var": 0.08361103545160722,
+        "between_var": 0.09976715391907451
+      },
+      "cancel_rate": {
+        "mean": 0.03551389497964609,
+        "within_var": 0.00031323505896528207,
+        "between_var": 0.00026374431700318943
+      },
+      "accept_rate": {
+        "mean": 0.8933762062591611,
+        "within_var": 0.001905259883311741,
+        "between_var": 0.002040186882711725
+      },
+      "login_hour": {
+        "mean": 0.7186622253400361,
+        "within_var": 3.8841067216461207,
+        "between_var": 3.4350487244253967
+      },
+      "avg_speed_kmh": {
+        "mean": 35.58860008158963,
+        "within_var": 5.428666559693144,
+        "between_var": 5.579957420457715
+      },
+      "route_deviation": {
+        "mean": 0.07615565700645036,
+        "within_var": 0.0011743870462182925,
+        "between_var": 0.0010896701060770777
+      },
+      "orders_per_hour": {
+        "mean": 0.7672245031506946,
+        "within_var": 0.032735373630608085,
+        "between_var": 0.04232007027061302
+      },
+      "tap_interval_ms": {
+        "mean": 5.471482793145872,
+        "within_var": 0.010998812879201741,
+        "between_var": 0.015960720337870046
+      },
+      "swipe_speed": {
+        "mean": 0.5315908219523403,
+        "within_var": 0.00252501622790035,
+        "between_var": 0.0035367059159641325
+      }
+    },
+    "bike_day": {
+      "accept_latency_ms": {
+        "mean": 7.454893888476656,
+        "within_var": 0.0449780052864524,
+        "between_var": 0.07015593678189483
+      },
+      "idle_gap_min": {
+        "mean": 2.1849574926971016,
+        "within_var": 0.09567368180921268,
+        "between_var": 0.11452709358616585
+      },
+      "cancel_rate": {
+        "mean": 0.0409527630872364,
+        "within_var": 0.00030289282832720714,
+        "between_var": 0.00044365160195140716
+      },
+      "accept_rate": {
+        "mean": 0.8612592495076181,
+        "within_var": 0.0020015614659985755,
+        "between_var": 0.0023018929988082824
+      },
+      "login_hour": {
+        "mean": 12.931057699242299,
+        "within_var": 4.608131513200406,
+        "between_var": 3.9836658259626234
+      },
+      "avg_speed_kmh": {
+        "mean": 17.033363384004996,
+        "within_var": 3.9001396835825326,
+        "between_var": 7.749369768295376
+      },
+      "route_deviation": {
+        "mean": 0.12361549488302864,
+        "within_var": 0.0011311675113831012,
+        "between_var": 0.001539678893736514
+      },
+      "orders_per_hour": {
+        "mean": 0.6302390957683233,
+        "within_var": 0.031481679631674926,
+        "between_var": 0.04121219226602575
+      },
+      "tap_interval_ms": {
+        "mean": 5.446270245986861,
+        "within_var": 0.009855538706838057,
+        "between_var": 0.02108397163200278
+      },
+      "swipe_speed": {
+        "mean": 0.556463757388683,
+        "within_var": 0.002377267967407387,
+        "between_var": 0.003269458617875823
+      }
+    },
+    "bike_evening": {
+      "accept_latency_ms": {
+        "mean": 7.314551259583277,
+        "within_var": 0.05192834797912941,
+        "between_var": 0.08316147045117478
+      },
+      "idle_gap_min": {
+        "mean": 2.5647313724632457,
+        "within_var": 0.0969220174518785,
+        "between_var": 0.12086420723628272
+      },
+      "cancel_rate": {
+        "mean": 0.05784627545778888,
+        "within_var": 0.00034511778944787836,
+        "between_var": 0.0004242418173698821
+      },
+      "accept_rate": {
+        "mean": 0.7750030198699779,
+        "within_var": 0.00205652347922882,
+        "between_var": 0.0015955236737133273
+      },
+      "login_hour": {
+        "mean": 19.45297158559867,
+        "within_var": 3.2541985240920495,
+        "between_var": 1.7593033404627645
+      },
+      "avg_speed_kmh": {
+        "mean": 16.222515469712643,
+        "within_var": 4.463076806521753,
+        "between_var": 8.371459135958
+      },
+      "route_deviation": {
+        "mean": 0.13378316769062099,
+        "within_var": 0.001213496260343084,
+        "between_var": 0.0011563615670563874
+      },
+      "orders_per_hour": {
+        "mean": 0.47106146903450596,
+        "within_var": 0.03303267725561525,
+        "between_var": 0.025899646201051955
+      },
+      "tap_interval_ms": {
+        "mean": 5.397126661949788,
+        "within_var": 0.010376209443956789,
+        "between_var": 0.018599592671711202
+      },
+      "swipe_speed": {
+        "mean": 0.5779254865762534,
+        "within_var": 0.0024699972730852413,
+        "between_var": 0.0048414390857218405
+      }
+    }
+  },
+  "report": {
+    "h2": 3.124,
+    "alpha": 0.005,
+    "calibration_riders": 471,
+    "calibration_sessions": 37425,
+    "calibration_stepups": 185,
+    "calibration_stepup_rate": 0.00494
+  }
+}

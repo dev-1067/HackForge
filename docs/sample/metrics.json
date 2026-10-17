@@ -1,0 +1,473 @@
+{
+  "dataset": {
+    "riders": 2000,
+    "sessions": 171662,
+    "test_riders": 1000,
+    "test_sessions": 85827
+  },
+  "calibration": {
+    "h2": 3.124,
+    "alpha": 0.005,
+    "calibration_riders": 471,
+    "calibration_sessions": 37425,
+    "calibration_stepups": 185,
+    "calibration_stepup_rate": 0.00494
+  },
+  "naive_threshold": 2.796,
+  "speed": {
+    "sessions_scored": 20000,
+    "sessions_per_second": 31847,
+    "latency_ms_p50": 0.029,
+    "latency_ms_p95": 0.041
+  },
+  "systems": {
+    "trust_juggler": {
+      "honest_sessions": 68179,
+      "false_stepup_rate": 0.00415,
+      "false_lockout_rate": 0.0,
+      "stepup_rate_all_sessions": 0.00614,
+      "takeover_recall_14d": 0.96939,
+      "attacked_accounts": 196,
+      "detection_latency_sessions": {
+        "median": 3.0,
+        "p90": 8.0
+      },
+      "detection_latency_hours": {
+        "median": 26.3,
+        "p90": 138.0
+      },
+      "life_events": {
+        "new_phone": {
+          "riders": 39,
+          "rider_friction_rate": 0.05128,
+          "session_friction_rate": 0.00403
+        },
+        "os_update": {
+          "riders": 38,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "moved_city": {
+          "riders": 45,
+          "rider_friction_rate": 0.04444,
+          "session_friction_rate": 0.00203
+        },
+        "new_zone": {
+          "riders": 37,
+          "rider_friction_rate": 0.13514,
+          "session_friction_rate": 0.00529
+        },
+        "vacation_gap": {
+          "riders": 46,
+          "rider_friction_rate": 0.06522,
+          "session_friction_rate": 0.0058
+        },
+        "illness_slowdown": {
+          "riders": 34,
+          "rider_friction_rate": 0.47059,
+          "session_friction_rate": 0.03128
+        },
+        "schedule_change": {
+          "riders": 37,
+          "rider_friction_rate": 0.56757,
+          "session_friction_rate": 0.02989
+        },
+        "network_change": {
+          "riders": 36,
+          "rider_friction_rate": 0.02778,
+          "session_friction_rate": 0.00165
+        }
+      },
+      "background_rider_friction_21d": 0.05285,
+      "context_event_rider_friction_21d": 0.05394,
+      "attacks": {
+        "hard_handoff": {
+          "accounts": 28,
+          "recall_14d": 1.0,
+          "median_sessions_to_detect": 3.0,
+          "median_hours_to_detect": 40.9
+        },
+        "gradual_sharing": {
+          "accounts": 41,
+          "recall_14d": 0.92683,
+          "median_sessions_to_detect": 3.0,
+          "median_hours_to_detect": 43.8
+        },
+        "timeshare_rental": {
+          "accounts": 29,
+          "recall_14d": 1.0,
+          "median_sessions_to_detect": 2.0,
+          "median_hours_to_detect": 22.5
+        },
+        "credential_theft": {
+          "accounts": 41,
+          "recall_14d": 0.92683,
+          "median_sessions_to_detect": 3.0,
+          "median_hours_to_detect": 22.0
+        },
+        "slow_drift": {
+          "accounts": 31,
+          "recall_14d": 1.0,
+          "median_sessions_to_detect": 6.0,
+          "median_hours_to_detect": 94.0
+        },
+        "fleet_farming": {
+          "accounts": 26,
+          "recall_14d": 1.0,
+          "median_sessions_to_detect": 2.0,
+          "median_hours_to_detect": 2.3
+        }
+      }
+    },
+    "naive_anomaly": {
+      "honest_sessions": 68281,
+      "false_stepup_rate": 0.00492,
+      "false_lockout_rate": 0.0,
+      "stepup_rate_all_sessions": 0.00656,
+      "takeover_recall_14d": 0.84184,
+      "attacked_accounts": 196,
+      "detection_latency_sessions": {
+        "median": 1.0,
+        "p90": 6.0
+      },
+      "detection_latency_hours": {
+        "median": 0.0,
+        "p90": 93.8
+      },
+      "life_events": {
+        "new_phone": {
+          "riders": 39,
+          "rider_friction_rate": 0.25641,
+          "session_friction_rate": 0.00805
+        },
+        "os_update": {
+          "riders": 38,
+          "rider_friction_rate": 0.13158,
+          "session_friction_rate": 0.00508
+        },
+        "moved_city": {
+          "riders": 45,
+          "rider_friction_rate": 0.31111,
+          "session_friction_rate": 0.01014
+        },
+        "new_zone": {
+          "riders": 37,
+          "rider_friction_rate": 0.16216,
+          "session_friction_rate": 0.00529
+        },
+        "vacation_gap": {
+          "riders": 46,
+          "rider_friction_rate": 0.04348,
+          "session_friction_rate": 0.00193
+        },
+        "illness_slowdown": {
+          "riders": 34,
+          "rider_friction_rate": 0.08824,
+          "session_friction_rate": 0.00284
+        },
+        "schedule_change": {
+          "riders": 37,
+          "rider_friction_rate": 0.10811,
+          "session_friction_rate": 0.00427
+        },
+        "network_change": {
+          "riders": 36,
+          "rider_friction_rate": 0.02778,
+          "session_friction_rate": 0.00082
+        }
+      },
+      "background_rider_friction_21d": 0.14228,
+      "context_event_rider_friction_21d": 0.15768,
+      "attacks": {
+        "hard_handoff": {
+          "accounts": 28,
+          "recall_14d": 0.82143,
+          "median_sessions_to_detect": 1.0,
+          "median_hours_to_detect": 0.0
+        },
+        "gradual_sharing": {
+          "accounts": 41,
+          "recall_14d": 0.80488,
+          "median_sessions_to_detect": 1.0,
+          "median_hours_to_detect": 0.0
+        },
+        "timeshare_rental": {
+          "accounts": 29,
+          "recall_14d": 1.0,
+          "median_sessions_to_detect": 1.0,
+          "median_hours_to_detect": 0.0
+        },
+        "credential_theft": {
+          "accounts": 41,
+          "recall_14d": 0.92683,
+          "median_sessions_to_detect": 1.0,
+          "median_hours_to_detect": 0.0
+        },
+        "slow_drift": {
+          "accounts": 31,
+          "recall_14d": 0.54839,
+          "median_sessions_to_detect": 8.0,
+          "median_hours_to_detect": 93.8
+        },
+        "fleet_farming": {
+          "accounts": 26,
+          "recall_14d": 0.96154,
+          "median_sessions_to_detect": 1.0,
+          "median_hours_to_detect": 0.0
+        }
+      }
+    },
+    "strict_gate": {
+      "honest_sessions": 69277,
+      "false_stepup_rate": 0.00709,
+      "false_lockout_rate": 0.0,
+      "stepup_rate_all_sessions": 0.00678,
+      "takeover_recall_14d": 0.34184,
+      "attacked_accounts": 196,
+      "detection_latency_sessions": {
+        "median": 1.0,
+        "p90": 1.0
+      },
+      "detection_latency_hours": {
+        "median": 0.0,
+        "p90": 0.0
+      },
+      "life_events": {
+        "new_phone": {
+          "riders": 39,
+          "rider_friction_rate": 1.0,
+          "session_friction_rate": 0.0314
+        },
+        "os_update": {
+          "riders": 38,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "moved_city": {
+          "riders": 45,
+          "rider_friction_rate": 1.0,
+          "session_friction_rate": 0.05676
+        },
+        "new_zone": {
+          "riders": 37,
+          "rider_friction_rate": 1.0,
+          "session_friction_rate": 0.06261
+        },
+        "vacation_gap": {
+          "riders": 46,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "illness_slowdown": {
+          "riders": 34,
+          "rider_friction_rate": 0.02941,
+          "session_friction_rate": 0.00095
+        },
+        "schedule_change": {
+          "riders": 37,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "network_change": {
+          "riders": 36,
+          "rider_friction_rate": 1.0,
+          "session_friction_rate": 0.05936
+        }
+      },
+      "background_rider_friction_21d": 0.00203,
+      "context_event_rider_friction_21d": 0.65145,
+      "attacks": {
+        "hard_handoff": {
+          "accounts": 28,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "gradual_sharing": {
+          "accounts": 41,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "timeshare_rental": {
+          "accounts": 29,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "credential_theft": {
+          "accounts": 41,
+          "recall_14d": 1.0,
+          "median_sessions_to_detect": 1.0,
+          "median_hours_to_detect": 0.0
+        },
+        "slow_drift": {
+          "accounts": 31,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "fleet_farming": {
+          "accounts": 26,
+          "recall_14d": 1.0,
+          "median_sessions_to_detect": 1.0,
+          "median_hours_to_detect": 0.0
+        }
+      }
+    },
+    "open_gate": {
+      "honest_sessions": 69277,
+      "false_stepup_rate": 0.0,
+      "false_lockout_rate": 0.0,
+      "stepup_rate_all_sessions": 0.0,
+      "takeover_recall_14d": 0.0,
+      "attacked_accounts": 196,
+      "detection_latency_sessions": {
+        "median": null,
+        "p90": null
+      },
+      "detection_latency_hours": {
+        "median": null,
+        "p90": null
+      },
+      "life_events": {
+        "new_phone": {
+          "riders": 39,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "os_update": {
+          "riders": 38,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "moved_city": {
+          "riders": 45,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "new_zone": {
+          "riders": 37,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "vacation_gap": {
+          "riders": 46,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "illness_slowdown": {
+          "riders": 34,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "schedule_change": {
+          "riders": 37,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        },
+        "network_change": {
+          "riders": 36,
+          "rider_friction_rate": 0.0,
+          "session_friction_rate": 0.0
+        }
+      },
+      "background_rider_friction_21d": 0.0,
+      "context_event_rider_friction_21d": 0.0,
+      "attacks": {
+        "hard_handoff": {
+          "accounts": 28,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "gradual_sharing": {
+          "accounts": 41,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "timeshare_rental": {
+          "accounts": 29,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "credential_theft": {
+          "accounts": 41,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "slow_drift": {
+          "accounts": 31,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        },
+        "fleet_farming": {
+          "accounts": 26,
+          "recall_14d": 0.0,
+          "median_sessions_to_detect": null,
+          "median_hours_to_detect": null
+        }
+      }
+    }
+  },
+  "every_login_reference": {
+    "note": "re-verifying on every login means a check on 100% of sessions",
+    "false_stepup_rate": 1.0,
+    "takeover_recall_14d": 1.0
+  },
+  "tradeoff_curve": [
+    {
+      "threshold_multiplier": 0.5,
+      "false_stepup_rate": 0.18046,
+      "false_lockout_rate": 0.0004,
+      "takeover_recall_14d": 1.0,
+      "median_sessions_to_detect": 1.0
+    },
+    {
+      "threshold_multiplier": 0.75,
+      "false_stepup_rate": 0.03843,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 1.0,
+      "median_sessions_to_detect": 2.0
+    },
+    {
+      "threshold_multiplier": 1.0,
+      "false_stepup_rate": 0.00415,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.96939,
+      "median_sessions_to_detect": 3.0
+    },
+    {
+      "threshold_multiplier": 1.5,
+      "false_stepup_rate": 0.00016,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.85714,
+      "median_sessions_to_detect": 4.0
+    },
+    {
+      "threshold_multiplier": 2.0,
+      "false_stepup_rate": 0.0,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.71429,
+      "median_sessions_to_detect": 6.0
+    },
+    {
+      "threshold_multiplier": 3.0,
+      "false_stepup_rate": 0.0,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.35714,
+      "median_sessions_to_detect": 8.0
+    },
+    {
+      "threshold_multiplier": 4.0,
+      "false_stepup_rate": 0.0,
+      "false_lockout_rate": 0.0,
+      "takeover_recall_14d": 0.13776,
+      "median_sessions_to_detect": 10.0
+    }
+  ]
+}

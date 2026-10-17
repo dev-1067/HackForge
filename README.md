@@ -44,7 +44,7 @@ This is the exact case in the problem statement ("same city, same old phone, jus
 ### What makes this different from a basic anomaly detector
 
 1. **Context/Habit decoupling** (above), so life events never look like fraud.
-2. **Evidence accumulation across sessions** (CUSUM / sequential test). A quiet, slow handoff that stays under every single-session threshold still gets caught as drift builds up.
+2. **Evidence accumulation across sessions** (multivariate EWMA of per-feature z-scores). A rented account differs from its owner in the *same direction* every session, so that shift adds up while ordinary noise cancels. A quiet, slow handoff that stays under every single-session threshold still gets caught.
 3. **Calibrated honest-worker guarantee.** Alert thresholds are set by conformal calibration on each rider's own history and cohort, so we can state the false-alert rate we are targeting (for example ≤ 0.5% of honest sessions) and measure it.
 4. **Graduated response ladder.** Almost nobody sees friction. Hard blocks need strong evidence and a human.
 5. **Explainable by default.** Every flag carries the reasons ("same device, but tap cadence +4.1σ and accept-latency +3.6σ for 6 sessions").
@@ -139,42 +139,49 @@ Context features: `device_id`, `os`, `app_version`, `ip_asn`, `city`, `zone`, `n
 
 ### 5.2 Scenarios (all labeled with ground truth)
 
-**Honest life events (must NOT be blocked)**
-- new phone, new OS version
-- moved to another city
-- new delivery zone
-- vacation gap, then return
-- injury or illness (temporary slowdown)
-- seasonal schedule change
-- different network (new SIM, public Wi-Fi)
+**Honest life events (must NOT be blocked), 8 types**
+- `new_phone`: new device (often new OS); touch behaviour shifts a little
+- `os_update`: same phone, new OS and app version
+- `moved_city`: new city, zones and traffic; speed, routing and pace shift
+- `new_zone`: same city, different zones; mild shift
+- `vacation_gap`: 10 to 20 days away, then a few rusty sessions
+- `illness_slowdown`: about two weeks of slower, quieter riding
+- `schedule_change`: login hours move by 2.5 to 4 hours
+- `network_change`: new SIM / ISP, identical behaviour
 
 **Takeover and rental attacks (must be caught)**
 - **Hard handoff:** same phone, same city, a different person from session N onward (the headline case)
 - **Gradual sharing:** two people alternate sessions on the account
 - **Time-share rental:** the renter uses the account during the owner's off-hours
 - **Credential theft:** new device, new city, different habits
-- **Fleet farming:** one person running many accounts with near-identical habits (cross-account similarity)
-- **Slow drift handoff:** habits shift just under per-session thresholds, to test evidence accumulation
+- **Fleet farming:** one operator runs several accounts on one handset with one set of habits (the engine also notices a device shared across rider accounts)
+- **Slow drift handoff:** a substitute takes over gradually over about 15 sessions, to test evidence accumulation
 
-Output: ~2,000 to 10,000 riders and ~1M sessions (scalable by flag), written to the DB / Parquet / CSV in one command: `python -m sim.generate --riders 5000 --days 60`.
+Output: any number of riders (about 85 sessions each over 60 days), written as `riders.csv` and `sessions.csv` in one command: `python -m sim.generate --riders 5000 --days 60 --out data`. Ground truth (`gt_*` columns) is for evaluation only and is never sent to the engine.
 
 ---
 
 ## 6. The scoring engine in detail
 
 ### 6.1 Per-rider profile (online, updated incrementally)
-- Robust center and spread per habit feature (median / MAD or EWMA mean and variance).
-- A small covariance matrix across habit features, so correlated changes are scored jointly.
-- **Cold start:** a new rider borrows a prior from their archetype cohort (hierarchical shrinkage) and the prior fades as sessions accumulate.
-- Known-context memory: set of devices, cities and zones seen, with first-seen and last-seen times.
+Ten habit signals, grouped by *what is allowed to change them*:
+
+| Group | Signals | Excused when |
+|---|---|---|
+| **persona** (the person) | accept latency, idle gap, cancel rate, accept rate, login hour (circular) | never |
+| **environment** (where they work) | speed, route deviation, orders per hour | a new city is being learned (separate baseline per city, wider at first); mildly in a new zone |
+| **device** (the handset) | tap interval, swipe speed | a new device is being learned (separate baseline per device, wider at first) |
+
+- Mean and variance per signal are exponentially weighted, so the profile follows slow natural change.
+- **Cold start:** a new rider borrows a prior from their archetype cohort (robust, median / MAD) and the prior fades as sessions accumulate.
+- Known-context memory: devices, cities, zones, network providers and OS versions seen.
 
 ### 6.2 Two scores per session
-- **Context novelty `C` in [0, 1]:** how unfamiliar the context is (new device and new city score high, a previously seen device scores low).
-- **Habit deviation `H`:** Mahalanobis-style distance of this session's habit vector from the rider's profile, converted to a calibrated probability / p-value.
+- **Context novelty `C` in [0, 1]:** weighted share of unfamiliar context (new device 0.40, new city 0.25, ... plus 0.30 if the device is shared with 3 or more other rider accounts).
+- **Habit deviation `H`:** weighted mean of squared z-scores (capped at |z| = 4) against the baselines above.
 
 ### 6.3 Evidence accumulation
-A CUSUM-style statistic `E` over recent sessions per rider:
-`E_t = max(0, E_{t-1} + (z_t − k))` where `z_t` is the habit deviation and `k` is a slack parameter. A single odd session barely moves it, while a persistent shift grows quickly. A reset occurs after a verified step-up check.
+Each signal's z-score is smoothed over recent sessions (`m = 0.75 m + 0.25 z`) and `E` is the weighted mean of `m^2`, rescaled so an honest rider sits near 1. A single odd session barely moves it, while a persistent shift of `d` sigma drives it towards `7 d^2`. After a verified step-up the evidence resets and the recent sessions are learned as the owner's new normal.
 
 ### 6.4 Decision matrix
 
@@ -184,20 +191,21 @@ A CUSUM-style statistic `E` over recent sessions per rider:
 | high | low | **L0 Allow + learn context** (life event) |
 | low | medium | **L1 Allow + watch** (silent monitoring) |
 | low | high | **L2 Step-up** (selfie / liveness check) |
-| high | high | **L2/L3 Step-up, hold payout changes** |
-| any | very high and sustained | **L3 Manual review / L4 suspend** (human in the loop) |
+| high | high | **L2 Step-up** (the unfamiliar context lowers the threshold by up to 25%) |
+| any | failed step-up, or evidence above 2.5x threshold | **L3 Hold payouts, manual review** |
+| any | second failed step-up, or evidence above 4x threshold | **L4 Suspend pending review** (human in the loop) |
 
 ### 6.5 Calibration (the "never needlessly block" part)
-- Hold out each rider's honest sessions (and cohort-level honest sessions for new riders).
-- Use conformal-style thresholds so that the share of honest sessions reaching L2+ is bounded by a target `α` (default 0.5%).
-- Report the realized false-alert rate, per life-event type, as a headline number.
+- Replay riders known to be honest (including riders with life events) through the real engine, each owner passing every step-up.
+- Pick the smallest step-up threshold `h2` for which the share of scored sessions reaching L2 is at most `α` (default 0.5%), with a finite-sample correction `(alerts + 1) / (sessions + 1)`.
+- Calibration riders are disjoint from the test riders; the realized rates are reported on the test riders.
 
 ### 6.6 Profile-poisoning protection
-Baselines update only from sessions decided L0/L1. Sessions that triggered a step-up are excluded until verified.
+Learning fades to zero as evidence approaches the threshold and stops once a step-up is pending, so an attacker cannot slowly retrain the rider's profile. Escalated sessions are replayed into the baseline only after a verified step-up or a reviewer clears them.
 
 ### 6.7 Explanations
 Each decision stores top contributing features with direction and magnitude, for example:
-`habit: tap_interval_ms +4.1σ, accept_latency_ms +3.6σ · context: device unchanged · evidence: 6 consecutive deviating sessions`.
+`swipe_speed -3.65σ (device), orders_per_hour -2.58σ (environment) · known device and location · 3 consecutive sessions above normal; evidence 4.1 (step-up at 3.2)`.
 
 ### 6.8 Baselines we compare against
 1. **Strict Gate:** step-up on any context change.
@@ -320,15 +328,26 @@ Response
 
 | Metric | Definition | Target |
 |---|---|---|
-| **False lockout rate** | Honest sessions reaching L2+ / all honest sessions | ≤ 0.5% |
-| **Life-event pass rate** | Honest life-event sessions allowed without friction | ≥ 98% |
-| **Takeover detection latency** | Sessions (and hours) from true handoff to first L2+ | median ≤ 5 sessions |
+| **False step-up rate** | Honest-owner sessions reaching L2+ / all honest-owner sessions | ≤ 0.5% |
+| **False lockout rate** | Honest-owner sessions reaching L3+ (held or suspended) | ~0% |
+| **Ordinary life-event friction** | Share of riders asked for a selfie within 21 days of new phone, OS update, move, new zone, break or new network | close to the no-event background rate |
+| **Takeover detection latency** | Attacker sessions (and hours) from first impostor session to first L2+ | median ≤ 5 sessions |
 | **Takeover recall** | Attacked accounts flagged within 14 days | ≥ 90% |
-| **Step-up rate** | Share of all sessions seeing any friction | < 1% |
 | **Scoring latency** | p95 per session | < 50 ms |
 | **Throughput** | Sessions scored per second on one machine | ≥ 1,000/s |
 
-Plots to ship: precision/recall by attack type, lockout rate by life-event type, detection-latency distribution, and the Pareto curve against the three baselines.
+**Measured on 1,000 held-out riders (2,000 generated, seed 7; full output in `docs/sample/`):**
+
+| System | False step-up | False lockout | Takeover recall (14 d) | Riders asked for a selfie after an ordinary life event |
+|---|---|---|---|---|
+| **Trust Juggler** | 0.42% | 0.00% | **96.9%** (median 3 sessions) | **5.4%** (background without any event: 5.3%) |
+| Naive anomaly detector (same 0.5% budget) | 0.49% | 0.00% | 84.2% | 15.8% |
+| Strict gate (re-verify on any context change) | 0.71% | 0.00% | 34.2% | 65.1% |
+| Open gate | 0% | 0% | 0% | 0% |
+
+Median scoring latency is 0.03 ms (p95 0.04 ms), about 30,000 sessions per second on one core. These are results on our *synthetic* population; the simulator and its assumptions are in `sim/`.
+
+Plots to ship: recall by attack type, step-up rate by life-event type, detection-latency distribution, and the trade-off curve (`tradeoff_curve` in `docs/sample/compare.json`) against the baselines.
 
 ---
 
@@ -340,19 +359,22 @@ HackForge/
 ├── docker-compose.yml
 ├── .env.example
 ├── engine/                    # Dev A
-│   ├── features.py
-│   ├── profile.py             # per-rider baseline + cold start
-│   ├── scoring.py             # context + habit scores
-│   ├── evidence.py            # CUSUM accumulator
-│   ├── decision.py            # matrix + ladder
-│   ├── calibrate.py           # conformal thresholds
+│   ├── engine.py              # TrustEngine: score_session, step-up / review outcomes
+│   ├── features.py            # signal groups: persona / environment / device
+│   ├── profile.py             # per-rider baselines, known contexts, status
+│   ├── stats.py, priors.py    # online statistics, cohort priors (cold start)
+│   ├── evidence.py            # multivariate EWMA accumulator
+│   ├── calibrate.py, train.py # threshold calibration, model save/load
 │   ├── explain.py
+│   ├── models/default.json    # ready-to-use trained model
 │   └── tests/
 ├── sim/                       # Dev A
-│   ├── archetypes.py
-│   ├── scenarios.py           # life events + attacks
-│   ├── generate.py            # dataset builder
-│   └── evaluate.py            # metrics + baseline comparison
+│   ├── archetypes.py, rider.py
+│   ├── effects.py             # 8 life events + 6 attacks
+│   ├── generate.py            # dataset builder (CSV)
+│   ├── live.py                # LiveWorld for the demo lab
+│   ├── baselines.py, evaluate.py   # comparison systems + metrics
+│   └── quickstart.py
 ├── api/                       # Dev B
 │   ├── main.py
 │   ├── schemas.py             # Pydantic = the contract
@@ -373,6 +395,8 @@ HackForge/
 ---
 
 ## 12. Work split for three developers
+
+> **Status:** Dev A's part (engine, simulator, evaluation) is implemented and tested. See [`docs/dev-a.md`](docs/dev-a.md) for the hand-off to Dev B and Dev C.
 
 Keep the contract (sections 7 and 8) frozen after hour 2, so each person can work against mocks.
 
@@ -464,7 +488,7 @@ Sleep in shifts. Never leave the demo path untested for more than 4 hours.
 | Criterion | Our answer |
 |---|---|
 | Solves the stated problem | Context/Habit split directly handles the trade-off and the "same phone, new person" case |
-| Technical depth | Online profiles, hierarchical prior, CUSUM evidence, conformal calibration |
+| Technical depth | Online profiles, cohort priors, EWMA evidence accumulation, calibrated thresholds |
 | Honest-worker protection | Measured false-lockout rate per life event, ladder with human in the loop |
 | Real-time and scale | < 50 ms scoring, SSE, cache-backed state, throughput numbers |
 | Originality | Decoupling, drift accumulation, simulation lab, poisoning protection |
@@ -478,7 +502,7 @@ Sleep in shifts. Never leave the demo path untested for more than 4 hours.
 | Risk | Mitigation |
 |---|---|
 | Judges question synthetic data | State it openly, publish the generator and parameters, make the engine accept any CSV in our schema |
-| Model too complex to finish | Ship the matrix with robust z-scores first (hour 12). CUSUM and conformal are upgrades |
+| Model too complex to finish | Ship the matrix with robust z-scores first (hour 12). Evidence accumulation and calibration are upgrades (already built in `engine/`) |
 | Integration slips | Mocks and frozen contract from hour 2, checkpoint at hour 12 |
 | Live demo fails | Pre-recorded video, seeded deterministic scenarios, local Docker copy |
 | Redis/Postgres trouble | Fallback to in-process state and SQLite behind the same SQLAlchemy layer |
@@ -491,7 +515,7 @@ Sleep in shifts. Never leave the demo path untested for more than 4 hours.
 - [ ] Dataset generator runs in one command
 - [ ] `/sessions/score` returns a decision with reasons in < 50 ms
 - [ ] Live feed, Rider detail, Lab and Trade-off pages work against the real API
-- [ ] All six attack scenarios and seven life events can be triggered live
+- [ ] All six attack scenarios and eight life events can be triggered live
 - [ ] Metrics table from section 10 filled with real numbers
 - [ ] Docker Compose brings everything up with one command
 - [ ] Pitch deck and 5-minute demo rehearsed three times
@@ -514,7 +538,7 @@ cd web && npm install && npm run dev       # http://localhost:5173
 ## 20. Glossary
 
 - **Step-up:** extra verification (selfie/liveness, OTP) triggered for a risky session.
-- **CUSUM:** cumulative-sum test that detects small persistent shifts.
-- **Conformal calibration:** thresholding method that bounds the false-alert rate using held-out honest data.
+- **EWMA evidence:** exponentially weighted average of z-scores; a persistent shift adds up while noise cancels.
+- **Calibration:** choosing the step-up threshold from honest riders so the false-alert rate stays within a stated budget `α`.
 - **Cold start:** scoring a rider with little history, using a cohort prior.
 - **Profile poisoning:** an attacker's sessions gradually becoming the rider's "normal"; prevented by not learning from flagged sessions.

@@ -1,0 +1,2 @@
+# engine/ and sim/ use only the Python 3.10+ standard library.
+pytest>=8
