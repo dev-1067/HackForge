@@ -26,6 +26,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   const getPageTitle = () => {
     switch (location.pathname) {
+      case '/dashboard':
+      case '/live':
       case '/':
         return 'Live Command Center'
       case '/riders':

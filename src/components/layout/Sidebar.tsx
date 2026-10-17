@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Fingerprint,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -21,12 +22,18 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse }) => {
   const navItems = [
     {
-      to: '/',
+      to: '/dashboard',
       label: 'Live Command Center',
       shortLabel: 'Live',
       icon: Activity,
       badge: 'LIVE',
       badgeColor: 'bg-emerald-500/20 text-emerald-400',
+    },
+    {
+      to: '/',
+      label: 'Product Overview',
+      shortLabel: 'Home',
+      icon: Sparkles,
     },
     {
       to: '/riders',

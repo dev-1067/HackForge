@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from '@/hooks/useTheme'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LiveCommandCenter } from '@/pages/LiveCommandCenter'
+import { LandingPage } from '@/pages/LandingPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 
 export function App() {
@@ -18,6 +19,10 @@ export function App() {
     <ThemeProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public Product Landing Page */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* Operations Console Layout */}
           <Route
             element={
               <AppLayout
@@ -30,7 +35,7 @@ export function App() {
             }
           >
             <Route
-              path="/"
+              path="/dashboard"
               element={
                 <LiveCommandCenter
                   searchQuery={searchQuery}
@@ -40,6 +45,9 @@ export function App() {
                 />
               }
             />
+            {/* Alias /live to /dashboard */}
+            <Route path="/live" element={<Navigate to="/dashboard" replace />} />
+
             <Route
               path="/riders"
               element={
