@@ -71,10 +71,32 @@ appears on other pages when a new case arrives. API: `POST /lab/run` accepts `in
 Also added: dashboard "Fair to honest riders, firm on takeovers" panel (from the simulation figures, labelled as simulated), *Download CSV* on History and
 Sessions (formula-safe), and a skip-to-content link.
 
+## 3c. Needs attention, unanswered checks, queue pacing, rider explanation, map
+
+- **Dashboard "Needs attention"** filtered only the last ~60 streamed sessions (almost all normal), so it was nearly always empty. It now reads the stored
+  sessions (extra check or worse) and refreshes when a case changes.
+- **An unanswered extra check no longer waits forever.** After `TJ_STEPUP_EXPIRY_MINUTES` (default 60, `0` turns it off) a sweep (once a minute) closes
+  the check as *expired*, puts the account on hold so a person has to decide, writes a `stepup_expired` history entry and does **not** count it as a failed
+  check (not answering proves nothing). Review cards show "Waiting for the rider to confirm since …". The rider can still answer while it is pending.
+- **Needs review no longer refills itself.** The earlier cap of 6 plus the open rider requests made the badge sit at 7, and a new case was staged the second
+  one was decided. Now: at most 4 cases wait, a staged takeover at most every 25 s, nothing new for 30 s after a person decides, and while 4 are waiting the
+  background run pauses ("Paused, waiting for you") instead of piling on. Sections now show their own counts (Cases waiting (n), Rider requests (n)); the
+  sidebar badge is cases plus open requests. Cases that appear are real pipeline results: staged takeovers are scored like any other session, and honest
+  riders can still be flagged by chance.
+- **Rider: why the account is on hold or paused** (`explanation` in `GET /me/rider` and `/me/rider/account`): what was noticed (new phone, new place,
+  usual pattern differed), the sessions that stood out (date, city, phone), what it means, what the rider can do, when and by whom it was decided
+  (automatic safety check or our team), and an **Ask for a review** button that opens Help & Review with the request type and a starting message filled in.
+  No scores, thresholds or model terms, and the reviewer's private note is never shown (a test checks this).
+- **Map on the dashboard** (`GET /map/riders`): Leaflet with OpenStreetMap tiles. Zoomed out it shows a marker per city with the rider count (colour =
+  worst status, flagged cities pulse); click to zoom in, then each rider is a marker (click for name, status, last session, link). Filter by city and by
+  needs attention. It updates from the live stream (a rider who moves city moves on the map). Positions are worked out from the city and area code
+  because the demo data has no GPS; the page says so. Needs internet for the map background (the markers still work without it; the page says when the
+  background cannot load).
+
 ## 4. API additions (all company-only, backward compatible)
 
 `GET /riders` (+`city`, name/phone search), `GET /riders/{id}/timeline` (+`since`, `until`, `city`, `device`), `GET /decisions` (+`q`, `city`, `zone`,
-`device`, `since`, `until`, `case_status`, `reviewer`), `GET /sessions/{session_id}`, `GET /filters`, `GET /audit` (+`q`, `action`, `reviewer`, `since`,
+`device`, `since`, `until`, `case_status`, `reviewer`), `GET /sessions/{session_id}`, `GET /filters`, `GET /map/riders`, `GET /audit` (+`q`, `action`, `reviewer`, `since`,
 `until`, `offset`). `GET /decisions/{id}` and the session lookup also return a `rider` block (status, home city, usual pattern). Riders get 403 and
 anonymous callers 401 on every one of these. No tables or columns were added in this work.
 
@@ -109,12 +131,12 @@ Run on SQLite (the default), Python 3.13, Node 22, Chromium via Playwright:
 
 | Check | Result |
 |---|---|
-| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 227 passed |
+| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 237 passed |
 | `python -m pyflakes api engine sim conftest.py` | clean |
 | `npx tsc -b` | no errors |
 | `npm run build` | succeeds |
 | `npm run lint` | 0 errors (warnings about state set in effects remain, as in the existing pages) |
-| `node e2e/smoke.cjs` against a freshly started backend (real Chromium; 66 checks, now including live background cases cleared and suspended by a person, CSV downloads and the fairness panel: sign-in, dashboard, lab, search, filters, lookup, partner portal, dark mode, selection colour, landing text size, ripple, phone layouts, role isolation) | 66/66 passed |
+| `node e2e/smoke.cjs` against a freshly started backend (real Chromium; 69 checks, now including live background cases cleared and suspended by a person, CSV downloads and the fairness panel: sign-in, dashboard, lab, search, filters, lookup, partner portal, dark mode, selection colour, landing text size, ripple, phone layouts, role isolation) | 69/69 passed |
 | Landing page on a 390 px phone | no sideways scroll (was 15 px before this work) |
 
 Not run: Docker build; the new search tests on PostgreSQL.

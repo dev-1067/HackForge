@@ -40,6 +40,7 @@ export interface Decision {
   context_flags: string[]
   reasons: Reason[]
   model_version: string
+  awaiting_rider_since?: string | null
   review_verdict: string | null
   reviewed_by: string | null
   reviewed_at: string | null
@@ -144,6 +145,8 @@ export interface LabState {
   running: boolean
   rate: number
   auto_resolve: boolean
+  incidents?: boolean
+  waiting_for_review?: boolean
   riders: number
   blocked: string[]
   generated: number
@@ -169,10 +172,34 @@ export interface CompareData {
   }>
 }
 
+export interface StatusExplanation {
+  state: 'verification_needed' | 'on_hold' | 'suspended'
+  since: string | null
+  outcome: string
+  decided_by: string
+  noticed: string[]
+  evidence: Array<{ at: string; city: string | null; phone: string; what: string }>
+  what_it_means: string
+  what_you_can_do: string[]
+  note: string
+  help: { kind: string }
+}
+
+export interface MapRider {
+  rider_id: string
+  name: string | null
+  status: string
+  city: string | null
+  zone: string | null
+  last_seen_at: string
+  decision_level: Level
+}
+
 export interface RiderOverview {
   rider: { name: string; rider_id: string }
   account: { state: 'ok' | 'verification_needed' | 'on_hold' | 'suspended'; headline: string; detail: string; action_required: boolean }
   notices: string[]
+  explanation: StatusExplanation | null
   recent_activity: Array<{ when: string; city: string | null; phone: string; note: string; tone: 'normal' | 'noted' | 'check' }>
 }
 
@@ -208,6 +235,7 @@ export interface DeviceInfo {
 export interface AccountOverview {
   profile: { name: string; rider_id: string; phone_hint: string | null; member_since: string | null; last_sign_in: string | null }
   status: { state: RiderOverview['account']['state']; headline: string; detail: string; action_required: boolean }
+  explanation: StatusExplanation | null
   verification: {
     outstanding: { requested_at: string | null; message: string; origin: Origin } | null
     history: Array<{ requested_at: string | null; resolved_at: string | null; result: 'pending' | 'passed' | 'failed'; origin: Origin }>

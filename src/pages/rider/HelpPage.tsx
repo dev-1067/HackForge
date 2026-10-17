@@ -33,7 +33,7 @@ export const HelpPage: React.FC = () => {
   const [params] = useSearchParams()
   const [kind, setKind] = useState(KINDS.some((k) => k.value === params.get('kind')) ? params.get('kind')! : '')
   const [deviceId, setDeviceId] = useState(params.get('device') ?? '')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState((params.get('msg') ?? '').slice(0, 1000))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState('')
   const [sent, setSent] = useState('')

@@ -56,6 +56,11 @@ const CaseCard: React.FC<{ decision: Decision; count: number; onDone: (message: 
           {bullets.map((b) => <li key={b}>{b}</li>)}
         </ul>
       )}
+      {decision.awaiting_rider_since && (
+        <p className="mt-2 rounded-lg bg-secondary/60 px-3 py-1.5 text-app-sm text-foreground">
+          Waiting for the rider to confirm since {whenText(decision.awaiting_rider_since)}. If there is no answer the account is put on hold for a person to decide.
+        </p>
+      )}
       <p className="mt-2 text-app-13 text-muted-foreground">
         This is a reason to take a closer look, not proof that the account is being shared.{' '}
         <Link to={`/sessions/decision/${decision.decision_id}`} className="font-medium text-foreground underline underline-offset-2">View the session</Link>
@@ -202,6 +207,9 @@ export const NeedsReviewPage: React.FC = () => {
         </div>
       )}
       {cases.length > 0 && (
+        <h2 className="text-app-15 font-semibold text-foreground">Cases waiting ({cases.length})</h2>
+      )}
+      {cases.length > 0 && (
         <ul className="space-y-3">
           {cases.map(({ decision, count }) => (
             <CaseCard
@@ -226,7 +234,7 @@ export const NeedsReviewPage: React.FC = () => {
       {state !== 'completed' && (
         <>
           <div className="pt-2">
-            <h2 className="text-app-15 font-semibold text-foreground">Rider requests</h2>
+            <h2 className="text-app-15 font-semibold text-foreground">Rider requests ({visibleRequests.length})</h2>
             <p className="text-app-sm text-muted-foreground">Riders asking for help, a review, or telling us about a new phone.</p>
           </div>
           {visibleRequests.length === 0 ? (

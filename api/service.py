@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import json
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import case, func, or_, select, update
+from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.orm import Session as DbSession
 
 from engine import MODEL_VERSION, Session, TrustEngine, load_default_engine, load_engine
-from engine.profile import ESCALATED_STATUSES, STATUS_PENDING
+from engine.profile import ESCALATED_STATUSES, STATUS_HELD, STATUS_PENDING
 
 from .bus import EventBus
 from .db import Database
@@ -254,6 +254,33 @@ class TrustService:
         self.bus.publish("review", result)
         return result
 
+    def expire_stepups(self, now: datetime | None = None) -> list[str]:
+        """An extra check nobody answers does not wait forever.
+
+        After ``stepup_expiry_minutes`` the check is closed as expired and the account is put on hold, which puts the
+        case in front of a person. This is not counted as a failed check: not answering is not proof of anything."""
+        minutes = self.settings.stepup_expiry_minutes
+        if minutes <= 0:
+            return []
+        now = now or utcnow()
+        cutoff = now - timedelta(minutes=minutes)
+        expired: list[str] = []
+        with self.lock, self.db.session() as db:
+            for row in db.scalars(select(StepupRow).where(StepupRow.result == "pending", StepupRow.issued_at <= cutoff)):
+                state = self.engine.get_state(row.rider_id)
+                row.result, row.resolved_at, row.method = "expired", now, "no_answer"
+                if state is not None and state.status == STATUS_PENDING:
+                    state.status = STATUS_HELD
+                    self._sync_rider(db, row.rider_id)
+                    self._save_profile(db, row.rider_id)
+                db.add(AuditRow(rider_id=row.rider_id, actor="system", action="stepup_expired",
+                                details={"minutes": minutes, "status": state.status if state else None}, at=now))
+                expired.append(row.rider_id)
+            db.commit()
+        for rider_id in expired:
+            self.bus.publish("stepup", {"rider_id": rider_id, "result": "expired", "status": STATUS_HELD})
+        return expired
+
     # ------------------------------------------------------------------ queries
     def rider_detail(self, rider_id: str) -> dict[str, Any]:
         with self.db.session() as db:
@@ -365,10 +392,15 @@ class TrustService:
             stmt = self._session_filters(stmt, start, end, city, zone, device)
             rows = db.execute(stmt.limit(limit).offset(offset)).all()
             names = rider_names(db, [d.rider_id for d, _ in rows])
+            waiting = dict(db.execute(select(StepupRow.rider_id, func.min(StepupRow.issued_at)).where(
+                StepupRow.result == "pending", StepupRow.rider_id.in_({d.rider_id for d, _ in rows})).group_by(
+                StepupRow.rider_id)).all()) if rows else {}
             out = []
             for d, session in rows:
                 payload = decision_payload(d, session.started_at)
                 payload["rider_name"] = names.get(d.rider_id)
+                since = waiting.get(d.rider_id)
+                payload["awaiting_rider_since"] = since.isoformat() if since and d.review_verdict is None else None
                 payload["context"] = {k: session.context.get(k) for k in ("device_id", "city", "zone", "network_type")}
                 out.append(payload)
             return out
@@ -403,6 +435,30 @@ class TrustService:
                             "baseline": summary.get("baseline", {}), "known_cities": summary.get("known_cities", [])}
         payload["source"] = session.source
         return payload
+
+    def rider_map(self, city: str | None = None, limit: int = 500) -> list[dict[str, Any]]:
+        """Where each rider was last seen: the city and area of their latest session, with their current status."""
+        with self.db.session() as db:
+            latest = select(SessionRow.rider_id, func.max(SessionRow.started_at).label("at")).group_by(
+                SessionRow.rider_id).subquery()
+            stmt = select(RiderRow, SessionRow).join(latest, latest.c.rider_id == RiderRow.rider_id).join(
+                SessionRow, and_(SessionRow.rider_id == latest.c.rider_id, SessionRow.started_at == latest.c.at))
+            if city:
+                stmt = stmt.where(SessionRow.context["city"].as_string() == city)
+            rows = db.execute(stmt.order_by(RiderRow.rider_id).limit(limit)).all()
+            names = rider_names(db, [r.rider_id for r, _ in rows])
+            seen: set[str] = set()
+            out = []
+            for rider, session in rows:
+                if rider.rider_id in seen:
+                    continue
+                seen.add(rider.rider_id)
+                state = self.engine.get_state(rider.rider_id)
+                out.append({"rider_id": rider.rider_id, "name": names.get(rider.rider_id),
+                            "status": state.status if state else rider.status,
+                            "city": session.context.get("city"), "zone": session.context.get("zone"),
+                            "last_seen_at": session.started_at.isoformat(), "decision_level": rider.last_level})
+            return out
 
     def filter_options(self) -> dict[str, Any]:
         """Values for the filter drop-downs, taken from what is actually stored."""
