@@ -35,19 +35,19 @@ export const DeviationEvidenceChart: React.FC<DeviationEvidenceChartProps> = ({
 
   return (
     <div className={className}>
-      <div className="flex flex-wrap items-center justify-between text-xs mb-2">
+      <div className="flex flex-wrap items-center justify-between text-xs mb-3 font-sans">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 font-mono">
+          <div className="flex items-center gap-1.5 font-sans">
             <span className="w-2.5 h-2.5 rounded-sm bg-amber-500" />
-            <span className="text-muted-foreground">Habit Deviation (Instant)</span>
+            <span className="text-muted-foreground font-medium">Kinetic Deviation (Instant)</span>
           </div>
-          <div className="flex items-center gap-1.5 font-mono">
-            <span className="w-2.5 h-2.5 rounded-sm bg-blue-500" />
-            <span className="text-muted-foreground">Accumulated Evidence (Multi-Session)</span>
+          <div className="flex items-center gap-1.5 font-sans">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#0F3B2C] dark:bg-emerald-400" />
+            <span className="text-muted-foreground font-medium">Accumulated Evidence (Multi-Session)</span>
           </div>
-          <div className="flex items-center gap-1.5 font-mono">
-            <span className="w-2.5 h-0.5 bg-rose-500" />
-            <span className="text-muted-foreground">Escalation Threshold (0.60)</span>
+          <div className="flex items-center gap-1.5 font-sans">
+            <span className="w-3 h-0.5 bg-rose-500" />
+            <span className="text-muted-foreground font-medium">Step-up Threshold (0.60)</span>
           </div>
         </div>
       </div>
@@ -60,8 +60,8 @@ export const DeviationEvidenceChart: React.FC<DeviationEvidenceChartProps> = ({
           >
             <defs>
               <linearGradient id="evidenceFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
+                <stop offset="5%" stopColor={isDark ? '#10B981' : '#0F3B2C'} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={isDark ? '#10B981' : '#0F3B2C'} stopOpacity={0.0} />
               </linearGradient>
             </defs>
 
@@ -98,20 +98,20 @@ export const DeviationEvidenceChart: React.FC<DeviationEvidenceChartProps> = ({
                 if (active && payload && payload.length) {
                   const currentPoint = payload[0].payload as ChartDataPoint
                   return (
-                    <div className="bg-card border border-border p-2.5 rounded-md shadow-lg font-mono text-xs space-y-1 z-50">
+                    <div className="bg-card border border-border/80 p-3 rounded-xl shadow-lg font-sans text-xs space-y-1.5 z-50">
                       <div className="font-semibold text-foreground border-b border-border/60 pb-1 flex justify-between gap-4">
-                        <span>Window: {label}</span>
-                        <span className="text-blue-500 font-bold">{currentPoint.decisionLevel}</span>
+                        <span>Time: {label}</span>
+                        <span className="font-bold text-[#0F3B2C] dark:text-emerald-400">{currentPoint.decisionLevel}</span>
                       </div>
-                      <div className="flex justify-between gap-4 text-amber-500">
+                      <div className="flex justify-between gap-4 text-amber-600 dark:text-amber-400">
                         <span>Habit Deviation:</span>
-                        <span className="font-bold">{formatPercent(currentPoint.habitDeviation)}</span>
+                        <span className="font-bold font-mono">{formatPercent(currentPoint.habitDeviation)}</span>
                       </div>
-                      <div className="flex justify-between gap-4 text-blue-500">
+                      <div className="flex justify-between gap-4 text-[#0F3B2C] dark:text-emerald-400">
                         <span>Accumulated Evidence:</span>
-                        <span className="font-bold">{formatPercent(currentPoint.evidenceAccumulated)}</span>
+                        <span className="font-bold font-mono">{formatPercent(currentPoint.evidenceAccumulated)}</span>
                       </div>
-                      <div className="text-[10px] text-muted-foreground pt-0.5">
+                      <div className="text-[10px] text-muted-foreground pt-0.5 font-mono">
                         Session: {currentPoint.sessionId}
                       </div>
                     </div>
@@ -127,7 +127,7 @@ export const DeviationEvidenceChart: React.FC<DeviationEvidenceChartProps> = ({
               dataKey="evidenceAccumulated"
               name="Accumulated Evidence"
               fill="url(#evidenceFill)"
-              stroke="#3B82F6"
+              stroke={isDark ? '#34D399' : '#0F3B2C'}
               strokeWidth={2}
             />
 
@@ -138,8 +138,8 @@ export const DeviationEvidenceChart: React.FC<DeviationEvidenceChartProps> = ({
               name="Habit Deviation"
               stroke="#F59E0B"
               strokeWidth={2}
-              dot={{ r: 3, fill: '#F59E0B', strokeWidth: 0 }}
-              activeDot={{ r: 5, stroke: '#F59E0B', strokeWidth: 2, fill: '#1E293B' }}
+              dot={{ r: 2.5, fill: '#F59E0B', strokeWidth: 0 }}
+              activeDot={{ r: 4.5, stroke: '#F59E0B', strokeWidth: 2, fill: '#0F3B2C' }}
             />
           </ComposedChart>
         </ResponsiveContainer>

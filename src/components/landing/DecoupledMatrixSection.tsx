@@ -1,184 +1,167 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import {
-  Smartphone,
-  Fingerprint,
-  CheckCircle,
-  AlertTriangle,
-  ShieldCheck,
-  ShieldAlert,
-  ArrowRight,
-  Info,
-  Sliders,
-  Sparkles,
-} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AnimatedSection } from './AnimatedSection'
 
 interface MatrixCell {
   id: string
-  contextState: 'unchanged' | 'changed'
-  habitState: 'unchanged' | 'changed'
+  contextState: string
+  habitState: string
   title: string
   meaning: string
-  decision: string
-  badgeVariant: 'success' | 'info' | 'warning' | 'critical'
+  recommendation: string
+  badgeVariant: 'success' | 'info' | 'warning' | 'review'
   action: string
-  telemetryNote: string
+  telemetrySummary: string
   detailedExplanation: string
 }
 
 export const DecoupledMatrixSection: React.FC = () => {
-  const [selectedCellId, setSelectedCellId] = useState<string>('c0_h1') // Default to the core handoff problem
+  const [selectedCellId, setSelectedCellId] = useState<string>('c0_h1')
 
   const matrixCells: MatrixCell[] = [
     {
       id: 'c0_h0',
-      contextState: 'unchanged',
-      habitState: 'unchanged',
-      title: 'Nominal Worker Session',
-      meaning: 'Standard delivery shift',
-      decision: 'L0 ALLOW',
+      contextState: 'Familiar Phone & Area',
+      habitState: 'Familiar Habits',
+      title: '1. Standard Delivery Shift',
+      meaning: 'Familiar phone, typical delivery behavior',
+      recommendation: 'Allow without interruption',
       badgeVariant: 'success',
-      action: 'Allow session normally; update longitudinal confidence metric.',
-      telemetryNote: 'Context novelty: 0.08 · Habit deviation: 0.12 · Evidence score: 0.06',
+      action: 'Allow the shift normally with zero friction.',
+      telemetrySummary: 'Familiar smartphone • Routine orders • Expected cadence',
       detailedExplanation:
-        'Both environmental context (hardware ID, cell tower, delivery zone) and motor habit metrics (acceptance hesitation, swipe cadence, route choices) match the rider’s 30-day baseline distributions.',
+        'Both the phone environment and delivery habits match the rider’s regular pattern. The session proceeds smoothly without any interruption.',
     },
     {
       id: 'c1_h0',
-      contextState: 'changed',
-      habitState: 'unchanged',
-      title: 'Legitimate Life Event',
-      meaning: 'New phone, moved city, or roaming network',
-      decision: 'L0 ALLOW & LEARN',
+      contextState: 'Changed Phone or City',
+      habitState: 'Familiar Habits',
+      title: '2. Normal Life Event',
+      meaning: 'New smartphone or delivering in a new neighborhood',
+      recommendation: 'Allow and learn new context',
       badgeVariant: 'info',
-      action: 'Allow session with zero friction. Safely bind new device fingerprint to profile.',
-      telemetryNote: 'Context novelty: 0.88 · Habit deviation: 0.16 · Evidence score: 0.18',
+      action: 'Allow the shift without stopping work. Safely learn the new phone.',
+      telemetrySummary: 'New device model • Familiar order acceptance • Same rhythm',
       detailedExplanation:
-        'Hardware model or IP subnet has shifted, but neuromuscular interaction cadence, swipe rhythm, and dispatch acceptance latency are identical to historical rider habits. Protects honest worker from false lockout.',
+        'The phone or cellular network has changed, but the way orders are accepted and completed matches the rider’s usual rhythm. The system recognizes a legitimate upgrade and adapts gracefully.',
     },
     {
       id: 'c0_h1',
-      contextState: 'unchanged',
-      habitState: 'changed',
-      title: 'Suspected Account Handoff',
-      meaning: 'Same phone, different person operating handset',
-      decision: 'L2/L3 STEP-UP ESCALATION',
+      contextState: 'Familiar Phone & Area',
+      habitState: 'Persistent Behavior Change',
+      title: '3. Possible Account Handoff',
+      meaning: 'Registered phone, but unusual delivery patterns',
+      recommendation: 'Consider further checks',
       badgeVariant: 'warning',
-      action: 'Prompt silent biometric selfie gate before dispatching next batch of orders.',
-      telemetryNote: 'Context novelty: 0.12 · Habit deviation: 0.84 · Evidence score: 0.78',
+      action: 'Suggest a friendly in-app selfie check before the next batch of orders.',
+      telemetrySummary: 'Registered phone • Hesitant order acceptance • Different touch timing',
       detailedExplanation:
-        'The registered device and SIM match, but dispatch acceptance delay has spiked by +360% and swipe timing has diverged by >3 standard deviations. Classic signature of a rented or loaned account.',
+        'The registered phone is being used, but order reaction times and interaction patterns have changed across several consecutive deliveries. This pattern may indicate that someone else is operating the phone, warranting a closer look.',
     },
     {
       id: 'c1_h1',
-      contextState: 'changed',
-      habitState: 'changed',
-      title: 'Acute Takeover / Credential Theft',
-      meaning: 'Total anomaly across environment and motor habits',
-      decision: 'L4 TEMPORARY SUSPENSION',
-      badgeVariant: 'critical',
-      action: 'Pause dispatch privileges; route to operations team for identity reverification.',
-      telemetryNote: 'Context novelty: 0.94 · Habit deviation: 0.92 · Evidence score: 0.91',
+      contextState: 'Changed Phone or City',
+      habitState: 'Persistent Behavior Change',
+      title: '4. Simultaneous Divergence',
+      meaning: 'Unrecognized phone with completely unfamiliar behavior',
+      recommendation: 'Consider stronger verification or review',
+      badgeVariant: 'review',
+      action: 'Pause dispatches and route for quick human-in-the-loop review.',
+      telemetrySummary: 'Unrecognized device • Remote location • Unfamiliar delivery pattern',
       detailedExplanation:
-        'Both environmental parameters (unmapped device, datacenter proxy) and operational habits (scripted swipe cadence, erratic transit velocity) have simultaneously diverged. High confidence of malicious takeover.',
+        'Both the environment (unfamiliar device, unexpected network) and operational habits have diverged significantly. The system recommends stronger identity verification or analyst review before continuing dispatches.',
     },
   ]
 
   const activeCell = matrixCells.find((c) => c.id === selectedCellId) || matrixCells[2]
 
   return (
-    <AnimatedSection id="decoupled" className="py-20 md:py-28 border-t border-border/60">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
+    <AnimatedSection id="approach" className="py-20 md:py-28 border-t border-border/70">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14 font-sans">
         {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-secondary text-xs font-mono text-muted-foreground">
-            <Sliders className="w-3.5 h-3.5 text-primary" />
-            CORE ARCHITECTURE
+        <div className="text-center max-w-3xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-secondary text-xs font-medium text-foreground/80 border border-border">
+            <span>Our balanced approach</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground font-sans">
-            The Decoupled Decision Matrix
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            A new phone is a change. A new pattern deserves a closer look.
           </h2>
-          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-sans">
-            Most engines treat any change as fraud. Trust Juggler separates signals into what an honest human
-            changes legitimately versus what an impostor cannot fake.
+          <p className="text-base text-muted-foreground leading-relaxed font-normal">
+            Trust Juggler separates what changes naturally during everyday life from how an account is actually operated.
+            Instead of locking riders out for getting a new phone, we look for consistent behavioral patterns over time.
           </p>
         </div>
 
-        {/* Signals Breakdown: Context vs Habit */}
+        {/* Signals Breakdown: Context vs Habit (Clean Paydo Card Styling, Zero Icons) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Context Signals Card */}
-          <div className="p-6 rounded-2xl border border-indigo-500/30 bg-card/60 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center">
-                  <Smartphone className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-foreground">Context Signals</h3>
-                  <span className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">
-                    Cheap to change legitimately (Weak standalone evidence)
-                  </span>
-                </div>
-              </div>
+          <div className="p-7 md:p-8 rounded-3xl border border-border bg-card shadow-xs space-y-4">
+            <div className="space-y-1">
+              <h3 className="font-bold text-lg text-foreground">Context Signals</h3>
+              <p className="text-xs text-muted-foreground font-medium">
+                Changes naturally during everyday life
+              </p>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed font-sans">
-              Environmental telemetry that changes during normal human life: device upgrades, OS updates, visiting family,
-              switching cellular carriers, or working a new delivery zone.
+            <p className="text-sm text-foreground/80 leading-relaxed font-normal">
+              Environmental factors that frequently change for normal reasons: buying a new phone, operating system updates,
+              visiting family, switching mobile carriers, or taking a shift in a different neighborhood.
             </p>
 
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <span className="p-2 rounded bg-secondary/50 border border-border">Device Model & ID</span>
-              <span className="p-2 rounded bg-secondary/50 border border-border">Operating System</span>
-              <span className="p-2 rounded bg-secondary/50 border border-border">City & Delivery Zone</span>
-              <span className="p-2 rounded bg-secondary/50 border border-border">Carrier & IP Gateway</span>
+            <div className="grid grid-cols-2 gap-2 text-xs pt-2">
+              <span className="p-3 rounded-2xl bg-secondary/50 border border-border text-foreground/85 font-medium">
+                Phone model & system
+              </span>
+              <span className="p-3 rounded-2xl bg-secondary/50 border border-border text-foreground/85 font-medium">
+                City & delivery zone
+              </span>
+              <span className="p-3 rounded-2xl bg-secondary/50 border border-border text-foreground/85 font-medium">
+                Mobile carrier & network
+              </span>
+              <span className="p-3 rounded-2xl bg-secondary/50 border border-border text-foreground/85 font-medium">
+                Shift hours & schedule
+              </span>
             </div>
           </div>
 
           {/* Habit Signals Card */}
-          <div className="p-6 rounded-2xl border border-amber-500/30 bg-card/60 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center">
-                  <Fingerprint className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-foreground">Habit Signals</h3>
-                  <span className="text-[11px] font-mono text-amber-600 dark:text-amber-400 font-semibold">
-                    Hard to copy or hand over (Strong fraud evidence)
-                  </span>
-                </div>
-              </div>
+          <div className="p-7 md:p-8 rounded-3xl border border-border bg-card shadow-xs space-y-4">
+            <div className="space-y-1">
+              <h3 className="font-bold text-lg text-foreground">Habit Signals</h3>
+              <p className="text-xs text-muted-foreground font-medium">
+                Personal to the individual rider
+              </p>
             </div>
 
-            <p className="text-xs text-muted-foreground leading-relaxed font-sans">
-              Subconscious motor reflexes and operational traits unique to a rider: acceptance delay, touch intervals,
-              navigation habits, route efficiency, and typical break rhythms.
+            <p className="text-sm text-foreground/80 leading-relaxed font-normal">
+              Familiar ways of working that develop naturally over weeks of deliveries: how quickly an order is reviewed and accepted,
+              screen tap rhythm, typical transit pace, and usual break routines.
             </p>
 
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <span className="p-2 rounded bg-secondary/50 border border-border">Acceptance Latency (ms)</span>
-              <span className="p-2 rounded bg-secondary/50 border border-border">Swipe & Tap Cadence</span>
-              <span className="p-2 rounded bg-secondary/50 border border-border">Transit Speed Variance (σ)</span>
-              <span className="p-2 rounded bg-secondary/50 border border-border">Route Deviation Ratio</span>
+            <div className="grid grid-cols-2 gap-2 text-xs pt-2">
+              <span className="p-3 rounded-2xl bg-secondary/50 border border-border text-foreground/85 font-medium">
+                Order acceptance pace
+              </span>
+              <span className="p-3 rounded-2xl bg-secondary/50 border border-border text-foreground/85 font-medium">
+                Screen tap & swipe rhythm
+              </span>
+              <span className="p-3 rounded-2xl bg-secondary/50 border border-border text-foreground/85 font-medium">
+                Delivery speed profile
+              </span>
+              <span className="p-3 rounded-2xl bg-secondary/50 border border-border text-foreground/85 font-medium">
+                Navigation & break rhythm
+              </span>
             </div>
           </div>
         </div>
 
         {/* Interactive 2x2 Matrix Grid */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                Interactive 2×2 Decision Grid
-              </h3>
-              <p className="text-xs text-muted-foreground font-mono">
-                Click any cell below to see how Trust Juggler evaluates the combination in real time:
-              </p>
-            </div>
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-xl font-bold text-foreground tracking-tight">
+              Four possible outcomes
+            </h3>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -189,20 +172,20 @@ export const DecoupledMatrixSection: React.FC = () => {
                 switch (cell.badgeVariant) {
                   case 'success':
                     return isSelected
-                      ? 'border-emerald-500 bg-emerald-500/10 shadow-emerald-500/10'
-                      : 'border-emerald-500/30 hover:border-emerald-500/60'
+                      ? 'border-[#0F3B2C] dark:border-emerald-500 bg-[#0F3B2C]/5 shadow-sm'
+                      : 'border-border hover:border-[#0F3B2C]/40'
                   case 'info':
                     return isSelected
-                      ? 'border-blue-500 bg-blue-500/10 shadow-blue-500/10'
-                      : 'border-blue-500/30 hover:border-blue-500/60'
+                      ? 'border-blue-500 bg-blue-500/5 shadow-sm'
+                      : 'border-border hover:border-blue-500/40'
                   case 'warning':
                     return isSelected
-                      ? 'border-amber-500 bg-amber-500/10 shadow-amber-500/10'
-                      : 'border-amber-500/30 hover:border-amber-500/60'
-                  case 'critical':
+                      ? 'border-amber-500 bg-amber-500/5 shadow-sm'
+                      : 'border-border hover:border-amber-500/40'
+                  case 'review':
                     return isSelected
-                      ? 'border-rose-500 bg-rose-500/10 shadow-rose-500/10'
-                      : 'border-rose-500/30 hover:border-rose-500/60'
+                      ? 'border-rose-500 bg-rose-500/5 shadow-sm'
+                      : 'border-border hover:border-rose-500/40'
                 }
               }
 
@@ -211,76 +194,72 @@ export const DecoupledMatrixSection: React.FC = () => {
                   key={cell.id}
                   onClick={() => setSelectedCellId(cell.id)}
                   className={cn(
-                    'p-5 rounded-xl border bg-card cursor-pointer transition-all duration-200 shadow-sm relative space-y-3 group',
+                    'p-6 rounded-3xl border bg-card cursor-pointer transition-all duration-200 shadow-xs space-y-3 group',
                     getVariantColors()
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs font-mono">
-                        <span className="font-semibold text-muted-foreground uppercase">
-                          Context: {cell.contextState} · Habit: {cell.habitState}
-                        </span>
+                      <div className="text-xs text-muted-foreground font-medium">
+                        <span>{cell.contextState}</span> • <span>{cell.habitState}</span>
                       </div>
-                      <h4 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                      <h4 className="font-bold text-sm text-foreground group-hover:text-[#0F3B2C] dark:group-hover:text-emerald-400 transition-colors">
                         {cell.title}
                       </h4>
                     </div>
 
                     <span
                       className={cn(
-                        'text-[10px] font-mono px-2 py-0.5 rounded font-bold whitespace-nowrap',
+                        'text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap border',
                         cell.badgeVariant === 'success'
-                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                          ? 'bg-[#0F3B2C]/10 text-[#0F3B2C] dark:text-emerald-300 border-[#0F3B2C]/20'
                           : cell.badgeVariant === 'info'
-                          ? 'bg-blue-500/20 text-blue-700 dark:text-blue-400'
+                          ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20'
                           : cell.badgeVariant === 'warning'
-                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400'
-                          : 'bg-rose-500/20 text-rose-700 dark:text-rose-400'
+                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
+                          : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20'
                       )}
                     >
-                      {cell.decision}
+                      {cell.recommendation}
                     </span>
                   </div>
 
-                  <p className="text-xs text-muted-foreground leading-relaxed font-sans">{cell.meaning}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed font-normal">{cell.meaning}</p>
 
-                  <div className="text-[11px] font-mono text-foreground/80 flex items-center justify-between pt-2 border-t border-border/50">
+                  <div className="text-xs text-foreground/80 flex items-center justify-between pt-2.5 border-t border-border/60">
                     <span className="truncate">{cell.action}</span>
-                    <ArrowRight className="w-3.5 h-3.5 shrink-0 opacity-60 group-hover:translate-x-1 transition-transform" />
+                    <span className="text-xs opacity-60 group-hover:translate-x-1 transition-transform">→</span>
                   </div>
                 </div>
               )
             })}
           </div>
 
-          {/* Detailed Inspector for Selected Matrix Cell */}
+          {/* Selected Cell Detail Callout */}
           <AnimatePresence mode="wait">
             {activeCell && (
               <motion.div
                 key={activeCell.id}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.2 }}
-                className="p-5 md:p-6 rounded-2xl border border-blue-500/30 bg-card shadow-md space-y-3 font-mono text-xs"
+                className="p-6 md:p-7 rounded-3xl border border-border bg-card shadow-xs space-y-3 text-xs"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-blue-500" />
-                    <span className="font-bold text-foreground text-sm font-sans">{activeCell.title}</span>
-                    <span className="text-muted-foreground">({activeCell.decision})</span>
+                    <span className="w-2 h-2 rounded-full bg-[#0F3B2C] dark:bg-emerald-400" />
+                    <span className="font-bold text-foreground text-sm">{activeCell.title}</span>
                   </div>
-                  <div className="text-[11px] text-muted-foreground">{activeCell.telemetryNote}</div>
+                  <div className="text-muted-foreground text-xs">{activeCell.telemetrySummary}</div>
                 </div>
 
-                <p className="text-xs text-foreground/90 font-sans leading-relaxed pt-1">
+                <p className="text-sm text-foreground/90 leading-relaxed font-normal pt-1">
                   {activeCell.detailedExplanation}
                 </p>
 
-                <div className="pt-2 text-xs text-primary font-semibold flex items-center gap-2">
-                  <ArrowRight className="w-3.5 h-3.5" />
-                  <span>Enforced Action: {activeCell.action}</span>
+                <div className="pt-2 text-xs text-[#0F3B2C] dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+                  <span>Recommended response: {activeCell.action}</span>
                 </div>
               </motion.div>
             )}

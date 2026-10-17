@@ -4,7 +4,11 @@ import { ThemeProvider } from '@/hooks/useTheme'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LiveCommandCenter } from '@/pages/LiveCommandCenter'
 import { LandingPage } from '@/pages/LandingPage'
-import { PlaceholderPage } from '@/pages/PlaceholderPage'
+import { RidersInvestigationPage } from '@/pages/RidersInvestigationPage'
+import { SimulationLabPage } from '@/pages/SimulationLabPage'
+import { TradeoffAnalyticsPage } from '@/pages/TradeoffAnalyticsPage'
+import { ReviewQueuePage } from '@/pages/ReviewQueuePage'
+import { AuditLogPage } from '@/pages/AuditLogPage'
 
 export function App() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -48,70 +52,26 @@ export function App() {
             {/* Alias /live to /dashboard */}
             <Route path="/live" element={<Navigate to="/dashboard" replace />} />
 
-            <Route
-              path="/riders"
-              element={
-                <PlaceholderPage
-                  title="Riders Investigation"
-                  subtitle="Detailed drilldown into individual rider longitudinal profiles, historical baseline distributions, and multi-session evidence trajectory."
-                  phase="Phase 2 Implementation"
-                  features={[
-                    'Historical baseline comparison (30-day kernel density)',
-                    'Session timeline with graduated action triggers',
-                    'Context change log (hardware, carrier, IP, zones)',
-                    'Rider manual override & whitelist management',
-                  ]}
-                />
-              }
-            />
-            <Route
-              path="/simulation"
-              element={
-                <PlaceholderPage
-                  title="Interactive Simulation Lab"
-                  subtitle="Test the decoupled engine with synthetic scenarios: genuine hardware upgrades, physical phone handoffs, account takeover scripts, and zone migrations."
-                  phase="Phase 3 Implementation"
-                  features={[
-                    'Scenario 1: Benign hardware change (New phone, identical habits)',
-                    'Scenario 2: Physical handoff (Same phone, altered swipe & latency)',
-                    'Scenario 3: Synthetic takeover & proxy hopping',
-                    'Interactive threshold calibration sliders (Context vs Habit)',
-                  ]}
-                />
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <PlaceholderPage
-                  title="Trade-off Analytics (Pareto Frontier)"
-                  subtitle="Quantify the trade-off between honest worker friction (false positive step-up rate) and fraud detection efficacy."
-                  phase="Phase 4 Implementation"
-                  features={[
-                    'ROC / Precision-Recall curve visualizations',
-                    'Worker friction index by delivery zone',
-                    'Detection latency distribution (< 50ms requirement)',
-                    'Calibrated threshold sensitivity analysis',
-                  ]}
-                />
-              }
-            />
-            <Route
-              path="/review-queue"
-              element={
-                <PlaceholderPage
-                  title="Manual Fraud Review Queue"
-                  subtitle="Operational workbench for Level 3 (L3) escalated sessions requiring human investigator adjudication before account suspension."
-                  phase="Phase 5 Implementation"
-                  features={[
-                    'Priority queue sorted by accumulated evidence score',
-                    'Side-by-side biometric photo verification preview',
-                    'One-click actions: Clear, Step-up challenge, Suspend (L4)',
-                    'Audit trail export & incident notes',
-                  ]}
-                />
-              }
-            />
+            {/* Rider Profiles & Investigation Dossier */}
+            <Route path="/riders" element={<RidersInvestigationPage />} />
+            <Route path="/investigate" element={<Navigate to="/riders" replace />} />
+
+            {/* Interactive Simulation Lab */}
+            <Route path="/simulation" element={<SimulationLabPage />} />
+            <Route path="/lab" element={<Navigate to="/simulation" replace />} />
+
+            {/* Trade-off Analytics (Pareto Frontier) */}
+            <Route path="/analytics" element={<TradeoffAnalyticsPage />} />
+            <Route path="/tradeoff" element={<Navigate to="/analytics" replace />} />
+
+            {/* Fraud Adjudication Review Queue */}
+            <Route path="/review-queue" element={<ReviewQueuePage />} />
+            <Route path="/queue" element={<Navigate to="/review-queue" replace />} />
+
+            {/* Immutable Audit Trail Log */}
+            <Route path="/audit" element={<AuditLogPage />} />
+            <Route path="/audit-trail" element={<Navigate to="/audit" replace />} />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

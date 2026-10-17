@@ -4,48 +4,50 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Paydo Inspired Clean Editorial Light Palette */
+    --background: 140 12% 98%; /* #F7F8F6 warm off-white */
+    --foreground: 220 25% 10%; /* #111827 deep charcoal */
+    --card: 0 0% 100%; /* #FFFFFF crisp white */
+    --card-foreground: 220 25% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 94%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 94%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 262 83% 58%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
-    --radius: 0.5rem;
+    --popover-foreground: 220 25% 10%;
+    --primary: 160 59% 15%; /* #0F3B2C signature deep forest green */
+    --primary-foreground: 120 20% 98%;
+    --secondary: 140 14% 94%; /* #EEF2ED soft sage tint */
+    --secondary-foreground: 220 25% 10%;
+    --muted: 140 14% 94%;
+    --muted-foreground: 215 12% 44%;
+    --accent: 84 81% 44%; /* #84CC16 fresh lime accent */
+    --accent-foreground: 120 20% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 140 10% 90%; /* #E2E6E1 delicate hairline border */
+    --input: 140 10% 90%;
+    --ring: 160 59% 15%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 262 83% 58%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 19%;
-    --input: 217 33% 19%;
-    --ring: 221 83% 53%;
+    /* Deep Obsidian Forest Dark Mode */
+    --background: 160 56% 7%; /* #081C15 deep forest obsidian */
+    --foreground: 140 20% 96%; /* #F1F5F2 */
+    --card: 160 48% 12%; /* #0F3124 rich dark green card */
+    --card-foreground: 140 20% 96%;
+    --popover: 160 48% 12%;
+    --popover-foreground: 140 20% 96%;
+    --primary: 152 69% 45%; /* #10B981 emerald green */
+    --primary-foreground: 160 56% 7%;
+    --secondary: 160 38% 17%;
+    --secondary-foreground: 140 20% 96%;
+    --muted: 160 38% 17%;
+    --muted-foreground: 140 15% 65%;
+    --accent: 84 81% 44%;
+    --accent-foreground: 160 56% 7%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 140 20% 96%;
+    --border: 160 35% 19%; /* #1B4536 */
+    --input: 160 35% 19%;
+    --ring: 152 69% 45%;
   }
 
   * {

@@ -14,11 +14,10 @@ const THEME_STORAGE_KEY = 'trust-juggler-theme'
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    // Default to dark theme for cybersecurity operations console aesthetic
+    // Default to clean Paydo light theme
     const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null
     if (saved === 'dark' || saved === 'light') return saved
-    if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light'
-    return 'dark'
+    return 'light'
   })
 
   useEffect(() => {

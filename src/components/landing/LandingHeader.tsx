@@ -1,16 +1,8 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTheme } from '@/hooks/useTheme'
-import {
-  Fingerprint,
-  Moon,
-  Sun,
-  ArrowRight,
-  Menu,
-  X,
-  Radio,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { TrustJugglerLogo } from '@/components/ui/TrustJugglerLogo'
+import { Moon, Sun, Menu, X } from 'lucide-react'
 
 export const LandingHeader: React.FC = () => {
   const { theme, toggleTheme } = useTheme()
@@ -18,7 +10,7 @@ export const LandingHeader: React.FC = () => {
 
   const navLinks = [
     { href: '#problem', label: 'The Problem' },
-    { href: '#decoupled', label: 'Decoupled Logic' },
+    { href: '#approach', label: 'Our Approach' },
     { href: '#how-it-works', label: 'How It Works' },
     { href: '#demo', label: 'Interactive Demo' },
     { href: '#safety', label: 'Trust & Safety' },
@@ -34,70 +26,56 @@ export const LandingHeader: React.FC = () => {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/85 backdrop-blur-md transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Brand */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-lg bg-blue-600/10 dark:bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
-            <Fingerprint className="w-5 h-5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-sm tracking-tight text-foreground flex items-center gap-1.5">
-              Trust Juggler
-              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-semibold">
-                ENGINE v1.0
-              </span>
-            </span>
-            <span className="text-[10px] text-muted-foreground font-mono tracking-wider">
-              CONTINUOUS IDENTITY FOR GIG FLEETS
-            </span>
-          </div>
+    <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/85 backdrop-blur-md transition-colors font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+        {/* Brand Logo & Wordmark (Delivery Verify Theme) */}
+        <Link to="/" className="group flex items-center gap-3 focus:outline-none">
+          <TrustJugglerLogo size={34} showWordmark={true} />
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-muted-foreground">
+        {/* Desktop Navigation (Modern Paydo Capsule Pill Dock) */}
+        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-secondary/60 border border-border/70 shadow-2xs backdrop-blur-xs">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
               onClick={(e) => scrollToSection(e, link.href)}
-              className="hover:text-foreground transition-colors hover:scale-[1.02] transform duration-150"
+              className="px-3.5 py-1.5 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-background/90 transition-all duration-150"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        {/* Right CTA Actions */}
-        <div className="flex items-center gap-3">
-          {/* Theme Toggle */}
+        {/* Right Actions Cluster */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Subtle Theme Toggle Circle */}
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="p-2 rounded-lg border border-border bg-card/60 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className="w-10 h-10 rounded-full border border-border/70 bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground flex items-center justify-center transition-all duration-150 shadow-2xs focus:outline-none"
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
           >
             {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-amber-400 transition-transform hover:rotate-45" />
+              <Sun className="w-4 h-4 text-amber-400" />
             ) : (
-              <Moon className="w-4 h-4 text-slate-700 transition-transform hover:-rotate-12" />
+              <Moon className="w-4 h-4 text-slate-700" />
             )}
           </button>
 
-          {/* Primary Launch Dashboard CTA */}
+          {/* Primary Action Button (Operations Console Pill) */}
           <Link
             to="/dashboard"
-            className="group relative inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-mono font-semibold tracking-tight shadow-sm hover:shadow-blue-500/25 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+            className="group inline-flex items-center justify-center gap-2 h-10 px-5 rounded-full bg-[#0F3B2C] hover:bg-[#16533E] text-white font-medium text-xs sm:text-[13px] tracking-normal transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 focus:outline-none"
           >
-            <Radio className="w-3.5 h-3.5 text-blue-200 animate-pulse" />
-            <span>Launch Console</span>
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            <span>Operations Console</span>
+            <span className="text-xs transition-transform duration-200 group-hover:translate-x-0.5">→</span>
           </Link>
 
           {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground"
+            className="md:hidden w-10 h-10 rounded-full border border-border/70 bg-secondary/50 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors focus:outline-none"
             aria-label="Toggle mobile menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -107,25 +85,25 @@ export const LandingHeader: React.FC = () => {
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-border bg-card px-4 pt-3 pb-4 space-y-2 animate-in slide-in-from-top-2 duration-150">
+        <div className="md:hidden border-b border-border/80 bg-background/95 backdrop-blur-lg px-4 pt-3 pb-5 space-y-1.5 animate-in slide-in-from-top-2 duration-150 shadow-lg">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
               onClick={(e) => scrollToSection(e, link.href)}
-              className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground border-b border-border/40"
+              className="block px-3.5 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
             >
               {link.label}
             </a>
           ))}
-          <div className="pt-2">
+          <div className="pt-3">
             <Link
               to="/dashboard"
-              className="w-full justify-center flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-mono font-semibold"
+              className="flex items-center justify-center gap-2 w-full h-11 rounded-full bg-[#0F3B2C] hover:bg-[#16533E] text-white text-xs font-semibold shadow-sm transition-all"
               onClick={() => setMobileMenuOpen(false)}
             >
-              <span>Open Operations Console</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Operations Console</span>
+              <span>→</span>
             </Link>
           </div>
         </div>

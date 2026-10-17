@@ -46,16 +46,13 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
         )}
       </div>
 
-      <div className="flex items-center gap-1.5 font-medium">
-        <Radio className="w-3 h-3 opacity-75" />
-        <span>
-          {isMock ? 'ENGINE STATUS: SIMULATION MODE (DETERMINISTIC MOCK)' : 'ENGINE STATUS: FASTAPI STREAM LIVE'}
-        </span>
+      <div className="flex items-center gap-1.5 font-medium text-[11px] font-sans">
+        <span>{isLiveFeedActive ? (isMock ? 'Simulated Feed Active' : 'Live Feed Active') : 'Feed Paused'}</span>
       </div>
 
       {lastSyncTime && (
-        <span className="hidden md:inline text-[10px] opacity-70 border-l border-current/20 pl-2">
-          Sync: {new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        <span className="hidden md:inline text-[10px] opacity-70 border-l border-current/20 pl-2 font-mono">
+          {new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </span>
       )}
     </div>

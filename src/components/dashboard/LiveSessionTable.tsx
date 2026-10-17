@@ -30,19 +30,19 @@ export const LiveSessionTable: React.FC<LiveSessionTableProps> = ({
   }
 
   return (
-    <div className="overflow-x-auto border border-border rounded-lg bg-card">
-      <table className="w-full text-left text-xs border-collapse">
+    <div className="overflow-x-auto border border-border/80 rounded-2xl bg-card shadow-xs">
+      <table className="w-full text-left text-xs border-collapse font-sans">
         <thead>
-          <tr className="border-b border-border bg-secondary/50 font-mono uppercase text-[11px] text-muted-foreground tracking-wider select-none">
-            <th className="py-3 px-3">Session & Time</th>
-            <th className="py-3 px-3">Rider</th>
-            <th className="py-3 px-3">Context Signals</th>
-            <th className="py-3 px-3">Decoupled Score</th>
-            <th className="py-3 px-3">Decision</th>
-            <th className="py-3 px-3 text-right">Inspect</th>
+          <tr className="border-b border-border/80 bg-secondary/35 text-[11px] font-semibold text-muted-foreground select-none">
+            <th className="py-3.5 px-4">Session & Time</th>
+            <th className="py-3.5 px-4">Rider Account</th>
+            <th className="py-3.5 px-4">Context Signals</th>
+            <th className="py-3.5 px-4">Habit vs Context</th>
+            <th className="py-3.5 px-4">Status</th>
+            <th className="py-3.5 px-4 text-right">Details</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border font-sans">
+        <tbody className="divide-y divide-border/60">
           <AnimatePresence initial={false}>
             {sessions.map((session) => {
               const isSelected = selectedSessionId === session.id
@@ -55,36 +55,36 @@ export const LiveSessionTable: React.FC<LiveSessionTableProps> = ({
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.15 }}
                   onClick={() => onSelectSession(session)}
-                  className={`group cursor-pointer transition-colors duration-150 hover:bg-secondary/60 ${
-                    isSelected ? 'bg-primary/5 dark:bg-blue-600/10' : ''
+                  className={`group cursor-pointer transition-colors duration-150 hover:bg-secondary/40 ${
+                    isSelected ? 'bg-[#0F3B2C]/5 dark:bg-emerald-600/10' : ''
                   }`}
                 >
                   {/* Session ID & Timestamp */}
-                  <td className="py-3 px-3 whitespace-nowrap font-mono">
-                    <div className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <td className="py-3.5 px-4 whitespace-nowrap">
+                    <div className="font-semibold text-foreground group-hover:text-primary transition-colors font-mono text-xs">
                       {session.sessionId}
                     </div>
-                    <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Clock className="w-3 h-3 opacity-70" />
+                    <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      <Clock className="w-3 h-3 opacity-60" />
                       <span>{formatTimestamp(session.timestamp)}</span>
-                      <span className="opacity-60 font-sans">({formatRelativeTime(session.timestamp)})</span>
+                      <span className="opacity-60">({formatRelativeTime(session.timestamp)})</span>
                     </div>
                   </td>
 
                   {/* Rider ID & Name */}
-                  <td className="py-3 px-3 whitespace-nowrap">
-                    <div className="font-medium text-foreground">{session.riderName}</div>
-                    <div className="text-[11px] font-mono text-muted-foreground">{session.riderId}</div>
+                  <td className="py-3.5 px-4 whitespace-nowrap">
+                    <div className="font-medium text-foreground text-xs">{session.riderName}</div>
+                    <div className="text-[11px] font-mono text-muted-foreground mt-0.5">{session.riderId}</div>
                   </td>
 
                   {/* Context Status */}
-                  <td className="py-3 px-3 whitespace-nowrap">
-                    <div className="flex items-center gap-1.5 text-foreground/90 font-mono">
+                  <td className="py-3.5 px-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 text-foreground/90 text-xs">
                       <Smartphone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <span className="truncate max-w-[150px]">{session.context.deviceModel}</span>
+                      <span className="truncate max-w-[150px] font-medium">{session.context.deviceModel}</span>
                       {session.context.isNewDevice && (
-                        <span className="text-[9px] font-semibold px-1 py-0.2 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                          NEW
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">
+                          New Device
                         </span>
                       )}
                     </div>
@@ -97,26 +97,27 @@ export const LiveSessionTable: React.FC<LiveSessionTableProps> = ({
                   </td>
 
                   {/* Decoupled Habit vs Context Gauges */}
-                  <td className="py-3 px-3 whitespace-nowrap">
+                  <td className="py-3.5 px-4 whitespace-nowrap">
                     <EvidenceGauge
                       contextNovelty={session.contextNoveltyScore}
                       habitDeviation={session.habitDeviationScore}
                       evidenceScore={session.evidenceScore}
                       compact
                     />
-                    <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
-                      Evidence accumulator: <span className="font-semibold text-foreground">{Math.round(session.evidenceScore * 100)}%</span>
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      Evidence accumulated: <span className="font-semibold text-foreground">{Math.round(session.evidenceScore * 100)}%</span>
                     </div>
                   </td>
 
                   {/* Decision Badge */}
-                  <td className="py-3 px-3 whitespace-nowrap">
+                  <td className="py-3.5 px-4 whitespace-nowrap">
                     <RiskBadge decision={session.decision} showAction />
                   </td>
 
                   {/* Inspect Action */}
-                  <td className="py-3 px-3 whitespace-nowrap text-right">
-                    <span className="inline-flex items-center justify-center p-1 rounded hover:bg-secondary text-muted-foreground group-hover:text-foreground transition-colors">
+                  <td className="py-3.5 px-4 whitespace-nowrap text-right">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors">
+                      <span className="hidden sm:inline">Inspect</span>
                       <ChevronRight className="w-4 h-4" />
                     </span>
                   </td>

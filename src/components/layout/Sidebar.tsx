@@ -1,199 +1,228 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import {
-  ShieldAlert,
-  Activity,
+  LayoutDashboard,
+  ClipboardList,
   Users,
-  Sliders,
-  Scale,
-  ListTodo,
+  SlidersHorizontal,
+  BarChart3,
+  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
-  Fingerprint,
-  Sparkles,
+  ShieldCheck,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TrustJugglerLogo } from '@/components/ui/TrustJugglerLogo'
 
 interface SidebarProps {
   collapsed: boolean
   onToggleCollapse: () => void
 }
 
+interface NavItem {
+  to: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  badge?: string
+  badgeColor?: string
+}
+
+interface NavGroup {
+  group: string
+  items: NavItem[]
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse }) => {
-  const navItems = [
+  const navGroups: NavGroup[] = [
     {
-      to: '/dashboard',
-      label: 'Live Command Center',
-      shortLabel: 'Live',
-      icon: Activity,
-      badge: 'LIVE',
-      badgeColor: 'bg-emerald-500/20 text-emerald-400',
+      group: 'OPERATIONS',
+      items: [
+        {
+          to: '/dashboard',
+          label: 'Live Console',
+          icon: LayoutDashboard,
+          badge: 'LIVE',
+          badgeColor: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+        },
+        {
+          to: '/review-queue',
+          label: 'Review Queue',
+          icon: ClipboardList,
+          badge: '4 cases',
+          badgeColor: 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
+        },
+        {
+          to: '/audit',
+          label: 'Audit Trail',
+          icon: FileText,
+          badge: 'Ledger',
+          badgeColor: 'bg-secondary text-muted-foreground',
+        },
+      ],
     },
     {
-      to: '/',
-      label: 'Product Overview',
-      shortLabel: 'Home',
-      icon: Sparkles,
+      group: 'INVESTIGATION',
+      items: [
+        {
+          to: '/riders',
+          label: 'Rider Profiles',
+          icon: Users,
+          badge: 'Dossier',
+          badgeColor: 'bg-secondary text-muted-foreground',
+        },
+        {
+          to: '/simulation',
+          label: 'Simulation Lab',
+          icon: SlidersHorizontal,
+          badge: '14 labs',
+          badgeColor: 'bg-[#0F3B2C]/10 text-[#0F3B2C] dark:bg-emerald-500/20 dark:text-emerald-300',
+        },
+        {
+          to: '/analytics',
+          label: 'Trade-off Analytics',
+          icon: BarChart3,
+          badge: 'Pareto',
+          badgeColor: 'bg-secondary text-muted-foreground',
+        },
+      ],
     },
     {
-      to: '/riders',
-      label: 'Riders Investigation',
-      shortLabel: 'Riders',
-      icon: Users,
-      badge: '3 under watch',
-    },
-    {
-      to: '/simulation',
-      label: 'Simulation Lab',
-      shortLabel: 'Sim Lab',
-      icon: Sliders,
-    },
-    {
-      to: '/analytics',
-      label: 'Trade-off Analytics',
-      shortLabel: 'Analytics',
-      icon: Scale,
-    },
-    {
-      to: '/review-queue',
-      label: 'Review Queue',
-      shortLabel: 'Queue',
-      icon: ListTodo,
-      badge: '4 pending',
-      badgeColor: 'bg-rose-500/20 text-rose-400',
+      group: 'SYSTEM',
+      items: [
+        {
+          to: '/',
+          label: 'Public Overview',
+          icon: ArrowUpRight,
+        },
+      ],
     },
   ]
 
   return (
     <aside
       className={cn(
-        'relative flex flex-col border-r border-border bg-card transition-all duration-300 z-30 select-none shrink-0',
+        'relative flex flex-col border-r border-border/80 bg-card transition-all duration-300 z-30 select-none shrink-0 font-sans',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-4 border-b border-border justify-between">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-9 h-9 rounded-lg bg-blue-600/10 dark:bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
-            <Fingerprint className="w-5 h-5" />
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm tracking-tight text-foreground truncate flex items-center gap-1.5">
-                Trust Juggler
-                <span className="text-[9px] font-mono font-medium px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/20">
-                  v0.1
-                </span>
-              </span>
-              <span className="text-[10px] text-muted-foreground font-mono tracking-wider truncate">
-                CONTINUOUS IDENTITY
-              </span>
-            </div>
-          )}
-        </div>
+      <div className="h-18 flex items-center px-4 border-b border-border/70 justify-between">
+        <NavLink to="/" className="flex items-center gap-3 overflow-hidden group focus:outline-none">
+          <TrustJugglerLogo size={32} showWordmark={!collapsed} markOnly={collapsed} />
+        </NavLink>
 
         <button
           onClick={onToggleCollapse}
-          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors focus:outline-none"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {!collapsed && (
-          <div className="px-3 pb-2 text-[10px] font-mono uppercase tracking-wider text-muted-foreground/70">
-            Operations Console
-          </div>
-        )}
+      {/* Navigation Groups */}
+      <nav className="flex-1 py-4 px-3 space-y-5 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.group} className="space-y-1">
+            {!collapsed && (
+              <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {group.group}
+              </div>
+            )}
 
-        {navItems.map((item) => {
-          const Icon = item.icon
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all group relative',
-                  isActive
-                    ? 'bg-primary/10 text-primary font-semibold dark:bg-blue-600/15 dark:text-blue-400'
-                    : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
-                )
-              }
-              title={collapsed ? item.label : undefined}
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon
-                    className={cn(
-                      'w-4 h-4 shrink-0 transition-colors',
-                      isActive ? 'text-primary dark:text-blue-400' : 'text-muted-foreground group-hover:text-foreground'
-                    )}
-                  />
+            {group.items.map((item) => {
+              const Icon = item.icon
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-[13px] font-medium transition-all group relative',
+                      isActive
+                        ? 'bg-[#0F3B2C] text-white shadow-xs dark:bg-emerald-600/20 dark:text-emerald-300 dark:border dark:border-emerald-500/30'
+                        : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground'
+                    )
+                  }
+                  title={collapsed ? item.label : undefined}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon
+                        className={cn(
+                          'w-4 h-4 shrink-0 transition-colors',
+                          isActive
+                            ? 'text-white dark:text-emerald-300'
+                            : 'text-muted-foreground group-hover:text-foreground'
+                        )}
+                      />
 
-                  {!collapsed && (
-                    <div className="flex-1 flex items-center justify-between min-w-0">
-                      <span className="truncate">{item.label}</span>
-                      {item.badge && (
-                        <span
-                          className={cn(
-                            'text-[10px] font-mono px-1.5 py-0.5 rounded font-medium truncate ml-1',
-                            item.badgeColor || 'bg-secondary text-muted-foreground'
+                      {!collapsed && (
+                        <div className="flex-1 flex items-center justify-between min-w-0">
+                          <span className="truncate">{item.label}</span>
+                          {item.badge && (
+                            <span
+                              className={cn(
+                                'text-[10px] px-2 py-0.5 rounded-full font-medium truncate ml-1',
+                                isActive
+                                  ? 'bg-white/20 text-white'
+                                  : item.badgeColor || 'bg-secondary text-muted-foreground'
+                              )}
+                            >
+                              {item.badge}
+                            </span>
                           )}
-                        >
-                          {item.badge}
-                        </span>
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
-
-                  {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r" />
-                  )}
-                </>
-              )}
-            </NavLink>
-          )
-        })}
+                </NavLink>
+              )
+            })}
+          </div>
+        ))}
       </nav>
 
-      {/* Core Split Pill */}
+      {/* Decoupled Principle Box */}
       {!collapsed && (
-        <div className="mx-3 mb-4 p-3 rounded-lg border border-border bg-secondary/40 text-[11px] space-y-1.5">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-            <ShieldAlert className="w-3 h-3 text-blue-500" />
-            Decoupled Principle
+        <div className="mx-3 mb-3 p-3.5 rounded-xl border border-border/80 bg-secondary/30 text-xs space-y-2">
+          <div className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#0F3B2C] dark:text-emerald-400" />
+            <span>Decoupled Logic</span>
           </div>
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-muted-foreground">Context:</span>
-            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-medium">Life events (allow)</span>
-          </div>
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-muted-foreground">Habit:</span>
-            <span className="font-mono text-amber-600 dark:text-amber-400 font-medium">Handoffs (escalate)</span>
+          <div className="text-[11px] text-muted-foreground space-y-1">
+            <div className="flex justify-between items-center">
+              <span>Context:</span>
+              <span className="font-medium text-emerald-700 dark:text-emerald-300">Device/Location (Allow)</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span>Habit:</span>
+              <span className="font-medium text-amber-700 dark:text-amber-300">Kinetic Cadence (Review)</span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Team Info / Footer */}
-      <div className="p-3 border-t border-border flex items-center justify-between">
+      {/* Operator Session Info Footer */}
+      <div className="p-3 border-t border-border/70 flex items-center justify-between">
         {!collapsed ? (
-          <div className="flex items-center gap-2 overflow-hidden">
-            <div className="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-mono font-bold">
-              C
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-[#0F3B2C] text-white flex items-center justify-center text-xs font-bold shrink-0">
+              TJ
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-xs font-medium text-foreground truncate">Dev C (Frontend)</span>
-              <span className="text-[10px] text-muted-foreground font-mono truncate">Hackathon Mode</span>
+              <span className="text-xs font-semibold text-foreground truncate">Operations Console</span>
+              <span className="text-[10px] text-muted-foreground truncate">Fleet Identity Monitor</span>
             </div>
           </div>
         ) : (
           <div className="w-full flex justify-center">
-            <div className="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-mono font-bold" title="Dev C (Frontend)">
-              C
+            <div
+              className="w-8 h-8 rounded-full bg-[#0F3B2C] text-white flex items-center justify-center text-xs font-bold"
+              title="Operations Console"
+            >
+              TJ
             </div>
           </div>
         )}

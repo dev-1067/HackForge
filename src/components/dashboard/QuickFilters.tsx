@@ -32,13 +32,9 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
   ]
 
   return (
-    <div className={cn('flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3', className)}>
+    <div className={cn('flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 font-sans', className)}>
       {/* Decision Level Tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-        <span className="text-xs text-muted-foreground mr-1 flex items-center gap-1 font-mono">
-          <Filter className="w-3 h-3" />
-          Filter:
-        </span>
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
         {levels.map((lvl) => {
           const isSelected = selectedLevel === lvl.key
           return (
@@ -46,9 +42,9 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
               key={lvl.key}
               onClick={() => onSelectLevel(lvl.key)}
               className={cn(
-                'px-2.5 py-1 rounded text-xs font-mono font-medium transition-all whitespace-nowrap',
+                'px-3.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap focus:outline-none',
                 isSelected
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-[#0F3B2C] text-white shadow-xs dark:bg-emerald-600'
                   : 'bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground'
               )}
             >
@@ -58,9 +54,9 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
         })}
       </div>
 
-      {/* Filter Stats & Search input for mobile/inline */}
-      <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground self-end sm:self-auto">
-        <span className="bg-secondary px-2 py-0.5 rounded border border-border">
+      {/* Filter Stats */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground self-end sm:self-auto font-sans">
+        <span className="bg-secondary/60 px-3 py-1 rounded-full border border-border/60 text-[11px]">
           Showing <span className="font-semibold text-foreground">{filteredCount}</span> of {totalCount} sessions
         </span>
       </div>

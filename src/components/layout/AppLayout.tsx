@@ -28,16 +28,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     switch (location.pathname) {
       case '/dashboard':
       case '/live':
-      case '/':
-        return 'Live Command Center'
+        return 'Operations Console'
       case '/riders':
         return 'Rider Investigation'
       case '/simulation':
-        return 'Interactive Simulation Lab'
+        return 'Simulation Lab'
       case '/analytics':
-        return 'Trade-off Analytics (Pareto Frontier)'
+        return 'Trade-off Analytics'
       case '/review-queue':
-        return 'Manual Fraud Review Queue'
+        return 'Review Queue'
+      case '/audit':
+        return 'Audit Trail'
       default:
         return 'Operations Console'
     }

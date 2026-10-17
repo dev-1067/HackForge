@@ -13,10 +13,6 @@ import {
   AlertTriangle,
   Users,
   ShieldCheck,
-  Radio,
-  Zap,
-  Info,
-  Layers,
 } from 'lucide-react'
 
 interface LiveCommandCenterProps {
@@ -162,69 +158,72 @@ export const LiveCommandCenter: React.FC<LiveCommandCenterProps> = ({
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Simulation Banner Notice */}
-      <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 font-mono">
+    <div className="space-y-6 pb-12 font-sans">
+      {/* Page Heading & Status */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border/60">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground font-sans">
+            Operations Overview
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Continuous identity verification, kinetic habit monitoring, and account handoff detection across active fleet dispatches.
+          </p>
+        </div>
         <div className="flex items-center gap-2">
-          <Info className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>
-            <strong>HACKATHON SIMULATION ENVIRONMENT:</strong> Operating with deterministic mock streams.
-            Context vs. Habit decoupling algorithm running in client memory. Ready for FastAPI endpoint connection.
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/80 border border-border text-[11px] font-medium text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Fleet Feed Connected
           </span>
         </div>
-        <span className="text-[10px] font-semibold uppercase tracking-wider bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 shrink-0">
-          Synthetic Baseline Loaded
-        </span>
       </div>
 
-      {/* KPI Stat Cards Grid */}
+      {/* KPI Stat Cards Grid (CoLuxe Style: Featured Dark Green Card + Clean White Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          title="Sessions Processed"
+          title="Sessions Evaluated"
           value={kpi?.sessionsProcessed ?? 48924}
           change={kpi?.sessionsChange24h ?? 12.4}
-          icon={<Activity className="w-4 h-4 text-blue-500" />}
-          variant="accent"
+          icon={<Activity className="w-5 h-5 text-white" />}
+          variant="featured"
         />
         <KpiCard
-          title="Active Escalation Alerts"
+          title="Review Queue Cases"
           value={kpi?.activeAlerts ?? 19}
           change={kpi?.alertsChange24h ?? -4.2}
-          icon={<AlertTriangle className="w-4 h-4 text-rose-500" />}
+          icon={<AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />}
           variant="alert"
         />
         <KpiCard
-          title="Accounts Under Watch"
+          title="Monitored Profiles"
           value={kpi?.accountsUnderWatch ?? 168}
           change={kpi?.watchChange24h ?? 3.1}
-          icon={<Users className="w-4 h-4 text-indigo-500" />}
+          icon={<Users className="w-5 h-5 text-muted-foreground" />}
           variant="warning"
         />
         <KpiCard
           title="Step-up Verification Rate"
           value={`${kpi?.stepUpRatePercent ?? 2.84}%`}
           change={kpi?.stepUpChange24h ?? -0.6}
-          icon={<ShieldCheck className="w-4 h-4 text-emerald-500" />}
+          icon={<ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
           variant="default"
-          subtitle="Target threshold < 4.0%"
+          subtitle="Fleet threshold < 4.0%"
         />
       </div>
 
       {/* Upper Grid: Evidence vs Habit Timeline Chart + Decoupled Logic Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Timeline Chart Container */}
-        <div className="lg:col-span-2 bg-card border border-border rounded-lg p-4 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
+        <div className="lg:col-span-2 bg-card border border-border/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Zap className="w-4 h-4 text-amber-500" />
-                Live Evidence Accumulator & Habit Deviation Tracking
+              <h2 className="text-sm font-bold text-foreground">
+                Kinetic Habit Drift & Evidence Accumulation
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Multi-session drift accumulation vs instant kinetic deviation. Escalates to L2/L3 when threshold exceeds 0.60.
+                Instant habit divergence plotted against multi-session accumulated risk score. Step-up trigger calibrated at 0.60.
               </p>
             </div>
-            <span className="text-[11px] font-mono bg-secondary px-2 py-0.5 rounded text-muted-foreground hidden sm:inline">
+            <span className="text-[11px] bg-secondary/80 border border-border/70 px-2.5 py-0.5 rounded-full text-muted-foreground hidden sm:inline font-medium">
               Window: 60 min
             </span>
           </div>
@@ -233,51 +232,50 @@ export const LiveCommandCenter: React.FC<LiveCommandCenterProps> = ({
         </div>
 
         {/* Core Logic Explainer Card */}
-        <div className="bg-card border border-border rounded-lg p-4 shadow-sm flex flex-col justify-between space-y-3">
+        <div className="bg-card border border-border/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between space-y-3">
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Layers className="w-4 h-4 text-blue-500" />
-                Decision Matrix Logic
+              <h3 className="text-sm font-bold text-foreground">
+                Decision Escalation Rules
               </h3>
-              <span className="text-[10px] font-mono text-muted-foreground">RULESET</span>
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">RULESET</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              How Trust Juggler avoids false positives on genuine riders while catching account rentals.
+              Distinguishing benign life events from unauthorized account sharing.
             </p>
           </div>
 
-          <div className="space-y-2 text-xs font-mono">
-            <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+          <div className="space-y-2 text-xs">
+            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
               <div>
-                <span className="text-emerald-700 dark:text-emerald-400 font-bold">L0 Allow</span>
-                <span className="block text-[10px] text-muted-foreground font-sans">New phone / city + Habit steady</span>
+                <span className="text-emerald-800 dark:text-emerald-300 font-bold">L0 Verified (Allow)</span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">New phone / location + Habit steady</span>
               </div>
-              <span className="text-emerald-600 dark:text-emerald-400 text-[11px]">Life Event</span>
+              <span className="text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold">Life Event</span>
             </div>
 
-            <div className="p-2 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-secondary/70 border border-border/70 flex items-center justify-between">
               <div>
-                <span className="text-blue-700 dark:text-blue-400 font-bold">L1 Watch</span>
-                <span className="block text-[10px] text-muted-foreground font-sans">Mild novelty + Minor cadence jitter</span>
+                <span className="text-foreground font-bold">L1 Observation (Watch)</span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">Mild location novelty + Normal cadence</span>
               </div>
-              <span className="text-blue-600 dark:text-blue-400 text-[11px]">Passive</span>
+              <span className="text-muted-foreground text-[11px] font-medium">Passive</span>
             </div>
 
-            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
               <div>
-                <span className="text-amber-700 dark:text-amber-400 font-bold">L2 Step-up</span>
-                <span className="block text-[10px] text-muted-foreground font-sans">Same phone + Habit altered &gt; 50%</span>
+                <span className="text-amber-800 dark:text-amber-300 font-bold">L2 Step-Up (Challenge)</span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">Same phone + Habit shifted &gt; 50%</span>
               </div>
-              <span className="text-amber-600 dark:text-amber-400 text-[11px]">Handoff Risk</span>
+              <span className="text-amber-700 dark:text-amber-400 text-[11px] font-semibold">Handoff Risk</span>
             </div>
 
-            <div className="p-2 rounded bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
               <div>
-                <span className="text-rose-700 dark:text-rose-400 font-bold">L3 Manual Review</span>
-                <span className="block text-[10px] text-muted-foreground font-sans">Evidence accumulated across 4+ sessions</span>
+                <span className="text-rose-800 dark:text-rose-300 font-bold">L3 Escalated (Review)</span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">Evidence accumulated across 4+ sessions</span>
               </div>
-              <span className="text-rose-600 dark:text-rose-400 text-[11px]">Analyst Queue</span>
+              <span className="text-rose-700 dark:text-rose-400 text-[11px] font-semibold">Analyst Queue</span>
             </div>
           </div>
         </div>
@@ -289,9 +287,8 @@ export const LiveCommandCenter: React.FC<LiveCommandCenterProps> = ({
         <div className="lg:col-span-2 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Radio className="w-4 h-4 text-emerald-500" />
-                Live Session Stream
+              <h2 className="text-sm font-bold text-foreground">
+                Active Session Stream
               </h2>
               <p className="text-xs text-muted-foreground">
                 Continuous scoring of real-time dispatch orders across delivery fleet.

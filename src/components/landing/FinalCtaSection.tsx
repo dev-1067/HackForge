@@ -1,60 +1,61 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Fingerprint, Activity, Radio, ExternalLink, ShieldCheck } from 'lucide-react'
 import { AnimatedSection } from './AnimatedSection'
+import { TrustJugglerLogo } from '@/components/ui/TrustJugglerLogo'
 
 export const FinalCtaSection: React.FC = () => {
   return (
-    <AnimatedSection className="py-20 md:py-28 border-t border-border/60 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-blue-500/10 dark:bg-blue-600/10 blur-[120px] rounded-full pointer-events-none -z-10" />
-
+    <AnimatedSection className="py-20 md:py-28 border-t border-border/70 relative overflow-hidden font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
-        {/* Main CTA Container */}
-        <div className="p-8 sm:p-12 md:p-16 rounded-3xl border border-blue-500/30 bg-card/90 shadow-2xl text-center space-y-6 max-w-4xl mx-auto relative overflow-hidden">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-mono">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            READY FOR LIVE OPERATIONS EVALUATION
+        {/* Main CTA Container (Signature Paydo Deep Forest Green Container) */}
+        <div className="p-8 sm:p-12 md:p-16 rounded-3xl bg-[#0F3B2C] text-white shadow-2xl text-center space-y-6 max-w-4xl mx-auto border border-[#16533E]">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 text-[#D4F469] text-xs font-semibold border border-white/15">
+            <span>Safer delivery accounts</span>
           </div>
 
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground font-sans leading-tight">
-            Trust the rider.{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-violet-600 dark:from-blue-400 dark:to-violet-400 bg-clip-text text-transparent">
-              Question the handoff.
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            Protect honest riders.{' '}
+            <span className="text-[#D4F469] block sm:inline">
+              Make account sharing harder to hide.
             </span>
           </h2>
 
-          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-sans max-w-2xl mx-auto">
-            Experience the real-time simulation feed, test live telemetry challenges, and inspect the
-            continuous decoupled identity engine in action.
+          <p className="text-sm sm:text-base text-white/85 leading-relaxed max-w-2xl mx-auto font-normal">
+            See how a more thoughtful approach to identity checks can reduce unnecessary interruptions while flagging sessions that deserve a closer look.
           </p>
 
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 font-mono text-xs">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               to="/dashboard"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-xl shadow-blue-500/25 hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-white hover:bg-white/90 text-[#0F3B2C] font-semibold text-sm shadow-md transition-all active:scale-95"
             >
-              <Radio className="w-4 h-4 text-blue-200 animate-pulse" />
-              <span>Launch Live Operations Console</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
+              <span>Open Operations Console</span>
+              <span>→</span>
             </Link>
           </div>
         </div>
 
-        {/* Footer info & Hackathon team split */}
-        <footer className="pt-8 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Fingerprint className="w-4 h-4 text-blue-500" />
-            <span className="font-semibold text-foreground">Trust Juggler</span>
-            <span>· HackForge 24h Hackathon Project</span>
+        {/* Minimal Footer with Project-Related Principles (Replaces section nav list) */}
+        <footer className="pt-8 border-t border-border/60 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-muted-foreground font-sans">
+          {/* Logo & Brand Name */}
+          <div className="flex items-center gap-3">
+            <TrustJugglerLogo size={26} showWordmark={true} />
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-[11px]">
-            <span>Developer C: Frontend & Ops Console</span>
-            <span className="opacity-40">|</span>
-            <span>Developer A: Identity Engine & Sim</span>
-            <span className="opacity-40">|</span>
-            <span>Developer B: FastAPI & DB</span>
+          {/* Project-Related Principles Row (Restrained, subtle dots) */}
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-muted-foreground font-medium">
+            <span className="hover:text-foreground transition-colors">Context-aware checks</span>
+            <span className="text-muted-foreground/30">•</span>
+            <span className="hover:text-foreground transition-colors">Rider-first protection</span>
+            <span className="text-muted-foreground/30">•</span>
+            <span className="hover:text-foreground transition-colors">Behavior over device</span>
+            <span className="text-muted-foreground/30">•</span>
+            <span className="hover:text-foreground transition-colors">Evidence across sessions</span>
+          </div>
+
+          {/* Concise Context Note */}
+          <div className="text-muted-foreground/70 text-[11px] text-center md:text-right">
+            Real-time identity verification designed for delivery platforms.
           </div>
         </footer>
       </div>

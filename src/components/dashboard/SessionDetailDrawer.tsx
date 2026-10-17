@@ -7,7 +7,7 @@ import {
   Smartphone,
   MapPin,
   Wifi,
-  Sparkles,
+  ShieldCheck,
   ShieldAlert,
   ArrowRight,
   Fingerprint,
@@ -91,24 +91,25 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({ sessio
           )}
 
           {/* Plain English Reason Box */}
-          <div className="p-4 rounded-lg border border-blue-500/30 bg-blue-500/5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 dark:text-blue-400 font-mono">
-              <Sparkles className="w-4 h-4" />
-              SYSTEM EXPLANATION & SIGNAL DECOUPLING
+          <div className="p-4 rounded-xl border border-border/80 bg-secondary/40 space-y-2.5 font-sans">
+            <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+              <ShieldCheck className="w-4 h-4 text-[#0F3B2C] dark:text-emerald-400" />
+              <span>Operational Assessment & Signal Decoupling</span>
             </div>
-            <p className="text-sm text-foreground/90 leading-relaxed font-sans">
+            <p className="text-xs sm:text-[13px] text-foreground/90 leading-relaxed font-sans">
               {session.explanation}
             </p>
-            <div className="pt-2 border-t border-blue-500/20 text-xs font-mono text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-              <ArrowRight className="w-3.5 h-3.5 shrink-0" />
-              <span>Recommended Action: {session.recommendedAction}</span>
+            <div className="pt-2 border-t border-border/60 text-xs text-muted-foreground flex items-center gap-1.5 font-sans">
+              <ArrowRight className="w-3.5 h-3.5 shrink-0 text-[#0F3B2C] dark:text-emerald-400" />
+              <span className="font-medium text-foreground">Recommended Action:</span>
+              <span>{session.recommendedAction}</span>
             </div>
           </div>
 
           {/* Tri-Gauge: Context vs Habit vs Evidence */}
-          <div className="p-4 rounded-lg border border-border bg-card space-y-3">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-primary" />
+          <div className="p-4 rounded-xl border border-border/80 bg-card space-y-3 font-sans">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-muted-foreground" />
               Signal Decoupling Score Breakdown
             </h3>
             <EvidenceGauge
@@ -252,16 +253,16 @@ export const SessionDetailDrawer: React.FC<SessionDetailDrawerProps> = ({ sessio
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-1.5 rounded-md border border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="px-4 py-2 rounded-full border border-border/80 bg-secondary/60 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Close
             </button>
             <button
               onClick={handleTriggerStepUp}
               disabled={challengeSent}
-              className="px-3.5 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium font-mono hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm"
+              className="px-4 py-2 rounded-full bg-[#0F3B2C] text-white hover:bg-[#16533E] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-xs font-medium disabled:opacity-50 transition-all shadow-xs"
             >
-              {challengeSent ? 'Challenge Active ✓' : 'Trigger Step-Up (L2)'}
+              {challengeSent ? 'Step-Up Verification Dispatched ✓' : 'Dispatch Step-Up Verification'}
             </button>
           </div>
         </div>
