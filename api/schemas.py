@@ -50,6 +50,7 @@ class DecisionOut(BaseModel):
     ground_truth: dict[str, Any] | None = Field(None, description="Simulation only.")
     resolution: dict[str, Any] | None = Field(None, description="Lab only: how the step-up / review played out.")
     session: dict[str, Any] | None = Field(None, description="Full context and habit values (single-decision lookups).")
+    rider: dict[str, Any] | None = Field(None, description="Rider status, home city and usual pattern (single lookups).")
 
 
 class StepupIn(BaseModel):

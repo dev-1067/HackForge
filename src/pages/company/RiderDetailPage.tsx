@@ -5,6 +5,8 @@ import { ApiError } from '@/api/http'
 import { useOps } from '@/components/app/OpsContext'
 import { Panel } from '@/components/app/Panel'
 import { TrendChart, type TrendPoint } from '@/components/app/TrendChart'
+import { SelectFilter } from '@/components/app/FilterBar'
+import { RANGES, rangeSince, type RangeKey } from '@/lib/ranges'
 import { Alert } from '@/components/ui/Alert'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
@@ -25,16 +27,28 @@ export const RiderDetailPage: React.FC = () => {
   const [requests, setRequests] = useState<TeamRequest[]>([])
   const [error, setError] = useState('')
   const [missing, setMissing] = useState(false)
+  const [range, setRange] = useState<RangeKey>('all')
+  const [city, setCity] = useState('')
+  const [device, setDevice] = useState('')
+  const [sessionError, setSessionError] = useState('')
 
   const load = useCallback(async () => {
     try {
-      const [r, t, a, q] = await Promise.all([ops.rider(riderId), ops.timeline(riderId, 120), ops.riderAudit(riderId), ops.requests({ rider_id: riderId })])
-      setRider(r); setTimeline(t); setAudit(a); setRequests(q); setError(''); setMissing(false)
+      const [r, a, q] = await Promise.all([ops.rider(riderId), ops.riderAudit(riderId), ops.requests({ rider_id: riderId })])
+      setRider(r); setAudit(a); setRequests(q); setError(''); setMissing(false)
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) setMissing(true)
       else setError((e as Error).message)
     }
   }, [riderId])
+
+  const loadSessions = useCallback(async () => {
+    try {
+      setTimeline(await ops.timeline(riderId, 120, { since: rangeSince(range), city, device: device.trim() }))
+      setSessionError('')
+    } catch (e) { setSessionError((e as Error).message) }
+  }, [riderId, range, city, device])
+  useEffect(() => { void loadSessions() }, [loadSessions, changeTick])
 
   useEffect(() => { setRider(null); void load() }, [load])
   useEffect(() => { if (changeTick > 0) void load() }, [changeTick, load])
@@ -101,8 +115,25 @@ export const RiderDetailPage: React.FC = () => {
         </Panel>
       </div>
 
-      <Panel title="Recent sessions" flush>
-        {timeline.length === 0 ? <EmptyState title="No sessions yet.">Activity appears here after the rider’s first deliveries.</EmptyState> : (
+      <Panel
+        title="Recent sessions"
+        flush
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <SelectFilter label="Date range" value={range} onChange={(v) => setRange(v as RangeKey)} options={RANGES} className="py-1.5 text-app-13" />
+            <SelectFilter label="City" value={city} onChange={setCity} className="py-1.5 text-app-13"
+              options={[{ value: '', label: 'All cities' }, ...rider.known_cities.map((c) => ({ value: c, label: c }))]} />
+            <input value={device} onChange={(e) => setDevice(e.target.value)} aria-label="Phone ending" placeholder="Phone ending…" maxLength={20}
+              className="w-32 rounded-lg border border-border bg-card px-3 py-1.5 text-app-13 placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40" />
+          </div>
+        }
+      >
+        {sessionError && <p role="alert" className="px-4 py-3 text-app-sm text-rose-700 dark:text-rose-400">{sessionError}</p>}
+        {timeline.length === 0 ? (
+          range !== 'all' || city || device.trim()
+            ? <EmptyState title="No sessions match.">Try a wider date range or clear the city or phone filter.</EmptyState>
+            : <EmptyState title="No sessions yet.">Activity appears here after the rider’s first deliveries.</EmptyState>
+        ) : (
           <div className="max-h-96 overflow-auto">
             <table className="w-full min-w-[520px] text-left text-app-sm">
               <thead className="sticky top-0 bg-card">
@@ -114,7 +145,9 @@ export const RiderDetailPage: React.FC = () => {
               <tbody className="divide-y divide-border">
                 {[...timeline].reverse().slice(0, 40).map((t) => (
                   <tr key={t.session_id}>
-                    <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{whenText(t.started_at)}</td>
+                    <td className="whitespace-nowrap px-4 py-2">
+                      <Link to={`/sessions/session/${encodeURIComponent(t.session_id)}`} title="Open this session" className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">{whenText(t.started_at)}</Link>
+                    </td>
                     <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{[t.city, t.zone].filter(Boolean).join(' · ') || '—'}</td>
                     <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">…{(t.device_id ?? '').slice(-4)}{t.context_flags.includes('new_device') ? ' (new)' : ''}</td>
                     <td className="px-4 py-2"><StatusPill tone={LEVEL_TONE[t.level]}>{LEVEL_LABEL[t.level]}</StatusPill></td>

@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 
 const place = (d: Decision) => [d.context?.city, d.context?.zone].filter(Boolean).join(' · ') || '—'
 
-/** Recent sessions with a plain-language result. Each row opens the rider. */
+/** Recent sessions with a plain-language result. The time opens the session, the name opens the rider. */
 export const DecisionTable: React.FC<{ decisions: Decision[]; emptyText?: string }> = ({ decisions, emptyText }) => {
   if (decisions.length === 0) {
     return <EmptyState title="Nothing to show yet">{emptyText ?? 'Sessions appear here as riders use the app.'}</EmptyState>
@@ -27,7 +27,11 @@ export const DecisionTable: React.FC<{ decisions: Decision[]; emptyText?: string
         <tbody className="divide-y divide-border">
           {decisions.map((d) => (
             <tr key={d.decision_id} className="hover:bg-secondary/40">
-              <td className="whitespace-nowrap px-4 py-2 text-muted-foreground">{whenText(d.started_at ?? d.decided_at)}</td>
+              <td className="whitespace-nowrap px-4 py-2">
+                <Link to={`/sessions/decision/${d.decision_id}`} title="Open this session" className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus:outline-none focus-visible:underline">
+                  {whenText(d.started_at ?? d.decided_at)}
+                </Link>
+              </td>
               <td className="whitespace-nowrap px-4 py-2">
                 <Link to={`/riders/${encodeURIComponent(d.rider_id)}`} className="font-medium text-foreground hover:underline focus:outline-none focus-visible:underline">
                   {d.rider_name ?? `Rider ${d.rider_id}`}

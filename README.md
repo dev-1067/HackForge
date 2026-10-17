@@ -554,6 +554,8 @@ The first start creates the tables (SQLite file `data/trustjuggler.db`), builds 
 
 Anyone can also create a rider account at `/rider/register`. Company sign-up at `/company/register` needs the invite code in `TJ_COMPANY_INVITE_CODE`.
 
+**Finding things (operations):** *Riders* searches by name, rider ID or phone number; *Sessions* looks a session up by its session ID or decision number and filters by date range, result, city, area and phone; *Needs review* and *History* have search, filters and date ranges. Details and limits: `FEATURE_AUDIT_AND_PENDING_WORK.md`.
+
 **More accounts without the web form:** `python -m api.manage create-company-user --name "Asha" --email asha@fleet.example` (asks for the password), `create-rider`, `set-password`, `list-users`.
 
 **PostgreSQL instead of SQLite:** set `DATABASE_URL=postgresql+psycopg://user:pass@host:5432/db`, or `docker compose up --build` for the API with a PostgreSQL container. Tables are created automatically.

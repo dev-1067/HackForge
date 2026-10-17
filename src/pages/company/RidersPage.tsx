@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { StatusPill } from '@/components/ui/StatusPill'
 import { Panel } from '@/components/app/Panel'
+import { ActiveFilters, SearchInput, SelectFilter, type ActiveFilter } from '@/components/app/FilterBar'
 import { STATUS_LABEL, STATUS_TONE, whenText } from '@/lib/plain'
 import type { RiderListItem } from '@/types/api'
 
@@ -18,6 +19,8 @@ export const RidersPage: React.FC = () => {
   const [status, setStatus] = useState('')
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
+  const [city, setCity] = useState('')
+  const [cities, setCities] = useState<string[]>([])
   const [more, setMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
@@ -27,23 +30,25 @@ export const RidersPage: React.FC = () => {
     return () => window.clearTimeout(id)
   }, [query])
 
+  useEffect(() => { ops.filters().then((f) => setCities(f.cities)).catch(() => setCities([])) }, [])
+
   const load = useCallback(async () => {
     try {
-      const rows = await ops.riders({ status, q: debounced, limit: PAGE })
+      const rows = await ops.riders({ status, q: debounced, city, limit: PAGE })
       setRiders(rows)
       setMore(rows.length === PAGE)
       setError('')
     } catch (e) {
       setError((e as Error).message)
     }
-  }, [status, debounced])
+  }, [status, debounced, city])
 
   useEffect(() => { setRiders(null); void load() }, [load])
 
   async function loadMore() {
     setLoadingMore(true)
     try {
-      const rows = await ops.riders({ status, q: debounced, limit: PAGE, offset: riders?.length ?? 0 })
+      const rows = await ops.riders({ status, q: debounced, city, limit: PAGE, offset: riders?.length ?? 0 })
       setRiders((prev) => [...(prev ?? []), ...rows])
       setMore(rows.length === PAGE)
     } catch (e) {
@@ -53,32 +58,29 @@ export const RidersPage: React.FC = () => {
     }
   }
 
+  const active: ActiveFilter[] = [
+    query.trim() && { key: 'q', label: `Search: ${query.trim()}`, clear: () => setQuery('') },
+    status && { key: 's', label: STATUS_OPTIONS.find(([v]) => v === status)?.[1] ?? status, clear: () => setStatus('') },
+    city && { key: 'c', label: city, clear: () => setCity('') },
+  ].filter(Boolean) as ActiveFilter[]
+  const clearAll = () => { setQuery(''); setStatus(''); setCity('') }
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by rider ID"
-          aria-label="Search riders"
-          className="w-full rounded-lg border border-border bg-card px-3.5 py-2 text-app-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40 sm:max-w-xs"
-        />
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          aria-label="Filter by status"
-          className="rounded-lg border border-border bg-card px-3 py-2 text-app-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
-        >
-          {STATUS_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </select>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <SearchInput value={query} onChange={setQuery} label="Search riders" placeholder="Search by name, rider ID or phone number" className="sm:w-80" />
+        <SelectFilter label="Filter by status" value={status} onChange={setStatus} options={STATUS_OPTIONS.map(([value, label]) => ({ value, label }))} />
+        <SelectFilter label="Filter by city" value={city} onChange={setCity}
+          options={[{ value: '', label: 'All cities' }, ...cities.map((c) => ({ value: c, label: c }))]} />
       </div>
+      <ActiveFilters filters={active} onClearAll={clearAll} />
 
       {error && <Alert tone="error">{error}</Alert>}
       <Panel flush>
         {riders === null && !error ? (
           <div className="p-6"><Spinner label="Loading riders" /></div>
         ) : riders && riders.length === 0 ? (
-          <EmptyState title="No riders match.">Try a different search or status.</EmptyState>
+          <EmptyState title="No riders match.">Try a different name, ID or phone number, or fewer filters.{active.length > 0 && <> <button onClick={clearAll} className="font-medium underline">Clear all filters</button></>}</EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-app-sm">

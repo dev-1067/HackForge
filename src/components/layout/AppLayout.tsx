@@ -10,6 +10,7 @@ const TITLES: Array<[string, string]> = [
   ['/dashboard', 'Dashboard'],
   ['/review-queue', 'Needs review'],
   ['/riders', 'Riders'],
+  ['/sessions', 'Sessions'],
   ['/audit', 'History'],
   ['/simulation', 'Demo lab'],
   ['/analytics', 'How it compares'],

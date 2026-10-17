@@ -1,7 +1,7 @@
 import { API_BASE, request } from './http'
 import type {
   AccountOverview, ActiveSession, ActivityEvent, HelpRequest, TeamRequest,
-  AuditEntry, CompareData, Decision, LabState, MetricsSummary, RiderDetail, RiderListItem, RiderOverview,
+  AuditEntry, CompareData, Decision, FilterOptions, LabState, MetricsSummary, RiderDetail, RiderListItem, RiderOverview,
   Scenario, Session, TimelineItem,
 } from '@/types/api'
 
@@ -54,12 +54,15 @@ export const ops = {
     request<{ status: string; verdict: string }>(`/decisions/${id}/review`, {
       method: 'POST', body: { takeover_confirmed, note: note || undefined },
     }),
-  riders: (params: { status?: string; q?: string; limit?: number; offset?: number } = {}) =>
+  riders: (params: { status?: string; q?: string; city?: string; limit?: number; offset?: number } = {}) =>
     request<RiderListItem[]>(`/riders?${qs(params)}`),
   rider: (id: string) => request<RiderDetail>(`/riders/${encodeURIComponent(id)}`),
-  timeline: (id: string, limit = 120) => request<TimelineItem[]>(`/riders/${encodeURIComponent(id)}/timeline?limit=${limit}`),
+  timeline: (id: string, limit = 120, params: { since?: string; until?: string; city?: string; device?: string } = {}) =>
+    request<TimelineItem[]>(`/riders/${encodeURIComponent(id)}/timeline?${qs({ limit, ...params })}`),
   riderAudit: (id: string) => request<AuditEntry[]>(`/riders/${encodeURIComponent(id)}/audit`),
-  audit: (limit = 200) => request<AuditEntry[]>(`/audit?limit=${limit}`),
+  audit: (params: Record<string, string | number | undefined> = {}) => request<AuditEntry[]>(`/audit?${qs(params)}`),
+  sessionLookup: (sessionId: string) => request<Decision>(`/sessions/${encodeURIComponent(sessionId)}`),
+  filters: () => request<FilterOptions>('/filters'),
   requests: (params: { status?: string; rider_id?: string } = {}) =>
     request<TeamRequest[]>(`/review-requests?${qs(params)}`),
   respond: (id: number, action: 'start_review' | 'resolve' | 'decline', note?: string) =>
