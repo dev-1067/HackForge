@@ -82,6 +82,7 @@ class LabRunIn(BaseModel):
     action: Literal["start", "stop"]
     rate: float = Field(2.0, gt=0, le=100, description="Sessions per second.")
     auto_resolve: bool = True
+    incidents: bool = Field(False, description="Now and then stage a takeover for a rider (only when auto_resolve is off).")
 
 
 # ---------------------------------------------------------------------------- accounts

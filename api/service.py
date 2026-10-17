@@ -497,6 +497,11 @@ class TrustService:
             "median_sessions_to_detect": sorted(latencies)[len(latencies) // 2] if latencies else None,
         }
 
+    def open_case_count(self) -> int:
+        with self.db.session() as db:
+            return db.scalar(select(func.count(func.distinct(DecisionRow.rider_id))).where(
+                DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None))) or 0
+
     def compare(self) -> dict[str, Any]:
         path: Path = self.settings.compare_path
         if not path.exists():

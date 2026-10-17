@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { actionLabel, actorLabel, auditSentence, fullTime, whenText } from '@/lib/plain'
+import { downloadCsv } from '@/lib/csv'
 import { dayEnd, dayStart } from '@/lib/ranges'
 import type { AuditEntry, FilterOptions } from '@/types/api'
 
@@ -50,6 +51,16 @@ export const HistoryPage: React.FC = () => {
     } catch (e) { setError((e as Error).message) } finally { setLoadingMore(false) }
   }
 
+  const [exporting, setExporting] = useState(false)
+  async function exportCsv() {
+    setExporting(true)
+    try {
+      const rows = await ops.audit({ ...params, limit: 1000 })
+      downloadCsv('history.csv', ['When (UTC)', 'Rider ID', 'Rider name', 'What happened', 'By'],
+        rows.map((a) => [a.at, a.rider_id, a.rider_name, auditSentence(a), actorLabel(a.actor)]))
+    } catch (e) { setError((e as Error).message) } finally { setExporting(false) }
+  }
+
   const active: ActiveFilter[] = [
     query.trim() && { key: 'q', label: `Search: ${query.trim()}`, clear: () => setQuery('') },
     action && { key: 'a', label: actionLabel(action), clear: () => setAction('') },
@@ -72,7 +83,10 @@ export const HistoryPage: React.FC = () => {
         <DateField label="From" value={from} onChange={setFrom} max={to || undefined} />
         <DateField label="Until" value={to} onChange={setTo} min={from || undefined} />
       </div>
-      <ActiveFilters filters={active} onClearAll={clearAll} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <ActiveFilters filters={active} onClearAll={clearAll} />
+        <Button variant="secondary" size="sm" loading={exporting} disabled={!!rangeError || !entries?.length} onClick={() => void exportCsv()}>Download CSV</Button>
+      </div>
 
       {rangeError && <Alert tone="warning">{rangeError}</Alert>}
       {error && <Alert tone="error">{error} <button className="underline" onClick={() => void load()}>Try again</button></Alert>}

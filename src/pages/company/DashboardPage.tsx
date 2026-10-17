@@ -11,7 +11,7 @@ import { TrendChart, type TrendPoint } from '@/components/app/TrendChart'
 import { Spinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/utils'
 import { LEVEL_LABEL, pct, whenText, explain, describeFlags, STATUS_LABEL } from '@/lib/plain'
-import type { Decision, Level } from '@/types/api'
+import type { Decision, Level, MetricsSummary } from '@/types/api'
 
 const Stat: React.FC<{ label: string; value: number; format?: (n: number) => string; note?: string }> = ({ label, value, format, note }) => (
   <div className="px-4 py-3">
@@ -20,6 +20,24 @@ const Stat: React.FC<{ label: string; value: number; format?: (n: number) => str
     {note && <p className="text-app-13 text-muted-foreground">{note}</p>}
   </div>
 )
+
+/** The point of the product in three numbers, measured against the simulator's ground truth. */
+const Fairness: React.FC<{ sim: MetricsSummary['simulation'] }> = ({ sim }) => {
+  if (!sim || sim.honest_sessions === 0) return null
+  const caught = sim.impostor_accounts ? `${sim.impostor_accounts_flagged} of ${sim.impostor_accounts}` : '—'
+  return (
+    <Panel title="Fair to honest riders, firm on takeovers" note="Measured on simulated riders, where we know who was really riding.">
+      <dl className="grid gap-4 sm:grid-cols-3">
+        <div><dt className="text-app-13 text-muted-foreground">Honest sessions left alone</dt>
+          <dd className="text-app-xl font-semibold text-foreground">{pct(1 - sim.false_stepup_rate, 1)}</dd></div>
+        <div><dt className="text-app-13 text-muted-foreground">Staged takeovers caught</dt>
+          <dd className="text-app-xl font-semibold text-foreground">{caught}</dd></div>
+        <div><dt className="text-app-13 text-muted-foreground">Sessions until a takeover is noticed</dt>
+          <dd className="text-app-xl font-semibold text-foreground">{sim.median_sessions_to_detect ?? '—'}<span className="ml-1 text-app-13 font-normal text-muted-foreground">typical</span></dd></div>
+      </dl>
+    </Panel>
+  )
+}
 
 const MIX: Array<[Level, string]> = [['L0', 'bg-emerald-500'], ['L1', 'bg-sky-500'], ['L2', 'bg-amber-500'], ['L3', 'bg-rose-500'], ['L4', 'bg-rose-800']]
 
@@ -47,7 +65,7 @@ const OutcomeMix: React.FC<{ counts: Record<Level, number>; total: number }> = (
 }
 
 export const DashboardPage: React.FC = () => {
-  const { summary, recent } = useOps()
+  const { summary, recent, changeTick } = useOps()
   const [filter, setFilter] = useState<'all' | 'attention'>('all')
   const [search, setSearch] = useState('')
 
@@ -77,16 +95,23 @@ export const DashboardPage: React.FC = () => {
     })
   }, [recent, filter, search, range, history])
 
+  // Open cases come from the server, not from the short live feed, so they stay until a person decides.
+  const [pending, setPending] = useState<Decision[]>([])
+  useEffect(() => {
+    let live = true
+    ops.decisions({ case_status: 'pending', limit: 200 }).then((rows) => { if (live) setPending(rows) }).catch(() => undefined)
+    return () => { live = false }
+  }, [changeTick])
   const cases = useMemo(() => {
     const seen = new Set<string>()
     const out: Decision[] = []
-    for (const d of recent) {
-      if (d.level === 'L0' || d.level === 'L1' || d.review_verdict || seen.has(d.rider_id)) continue
+    for (const d of pending) {
+      if (seen.has(d.rider_id)) continue
       seen.add(d.rider_id)
       out.push(d)
     }
-    return out.slice(0, 4)
-  }, [recent])
+    return out
+  }, [pending])
 
   const chart: TrendPoint[] = useMemo(() =>
     [...recent].reverse().slice(-40).map((d) => ({
@@ -108,6 +133,8 @@ export const DashboardPage: React.FC = () => {
         <Stat label="Extra checks asked" value={summary.stepup_rate} format={(n) => pct(n)} note="of all sessions" />
       </div>
 
+      <Fairness sim={summary.simulation} />
+
       <OutcomeMix counts={summary.level_counts} total={summary.sessions_scored} />
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -116,14 +143,14 @@ export const DashboardPage: React.FC = () => {
         </Panel>
 
         <Panel
-          title="Needs review"
+          title={`Needs review${cases.length ? ` (${cases.length})` : ''}`}
           action={<Link to="/review-queue" className="text-app-13 font-medium text-foreground underline underline-offset-2">See all</Link>}
           flush
         >
           {cases.length === 0 ? (
             <p className="px-4 py-8 text-center text-app-sm text-muted-foreground">No cases need your attention right now.</p>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul className="max-h-72 divide-y divide-border overflow-y-auto">
               {cases.map((d) => (
                 <li key={d.decision_id}>
                   <Link to="/review-queue" className="block px-4 py-2.5 hover:bg-secondary/40 focus:outline-none focus-visible:bg-secondary/40">

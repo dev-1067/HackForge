@@ -78,7 +78,8 @@ export const lab = {
     }),
   step: (rider_id: string | undefined, count: number, auto_resolve = true) =>
     request<Decision[]>('/lab/step', { method: 'POST', body: { rider_id, count, auto_resolve } }),
-  run: (action: 'start' | 'stop', rate = 2) => request<LabState>('/lab/run', { method: 'POST', body: { action, rate } }),
+  run: (action: 'start' | 'stop', rate = 2, leaveForReview = false) =>
+    request<LabState>('/lab/run', { method: 'POST', body: { action, rate, auto_resolve: !leaveForReview, incidents: leaveForReview } }),
   reset: () => request<LabState>('/lab/reset', { method: 'POST' }),
 }
 

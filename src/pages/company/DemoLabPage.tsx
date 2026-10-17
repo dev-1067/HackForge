@@ -25,6 +25,7 @@ export const DemoLabPage: React.FC = () => {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [rate, setRate] = useState(2)
+  const [leaveForReview, setLeaveForReview] = useState(true)
   const [confirmReset, setConfirmReset] = useState(false)
 
   const load = useCallback(async () => {
@@ -130,11 +131,19 @@ export const DemoLabPage: React.FC = () => {
             <input type="number" min={0.5} max={50} step={0.5} value={rate} onChange={(e) => setRate(Number(e.target.value))}
               aria-label="Sessions per second" className="w-20 rounded-lg border border-border bg-card px-2 py-1.5 text-app-sm" />
           </label>
+          <label className="mt-3 flex items-start gap-2 text-app-sm">
+            <input type="checkbox" checked={leaveForReview} onChange={(e) => setLeaveForReview(e.target.checked)} disabled={state?.running}
+              className="mt-0.5 h-4 w-4 accent-[#0F3B2C]" />
+            <span>
+              <span className="font-medium text-foreground">Leave unusual cases for me to review</span>
+              <span className="block text-app-13 text-muted-foreground">Now and then a takeover is staged. It waits in Needs review until you clear or suspend the account, instead of being answered automatically.</span>
+            </span>
+          </label>
           <div className="mt-3 flex items-center gap-2">
             {state?.running ? (
               <Button variant="secondary" loading={busy === 'stop'} onClick={() => void run('stop', () => lab.run('stop'), () => 'Background activity stopped.')}>Stop</Button>
             ) : (
-              <Button loading={busy === 'start'} onClick={() => void run('start', () => lab.run('start', rate), () => 'Background activity started.')}>Start</Button>
+              <Button loading={busy === 'start'} onClick={() => void run('start', () => lab.run('start', rate, leaveForReview), () => leaveForReview ? 'Background activity started. Cases will wait in Needs review.' : 'Background activity started.')}>Start</Button>
             )}
             <span className="text-app-13 text-muted-foreground">{state?.running ? 'Running' : 'Stopped'} · {state?.generated ?? 0} sessions so far</span>
           </div>
