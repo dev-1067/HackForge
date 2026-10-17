@@ -1,9 +1,18 @@
+# Python / Backend
 __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
-data/
-model/
+/data/
+/model/
 *.db
-node_modules/
 .env
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+.DS_Store
