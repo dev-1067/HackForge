@@ -7,13 +7,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from datetime import timedelta
+
 from sqlalchemy import func, select
 
 from engine.profile import STATUS_PENDING
 
 from .auth import AuthContext
 from .errors import InvalidState, UnknownRider, ValidationFailed
-from .models import (REQUEST_KINDS, AuditRow, DecisionRow, ReviewRequestRow, SessionRow, SignInEventRow, StepupRow,
+from .models import (REQUEST_KINDS, AuditRow, DecisionRow, NotificationReadRow, ReviewRequestRow, SessionRow, SignInEventRow, StepupRow,
                      UserRow)
 from .portal import STATE_FROM_STATUS, STATE_TEXT, ensure_rider_row, status_explanation
 from .service import TrustService, rider_names, utcnow
@@ -308,3 +310,102 @@ def export_data(svc: TrustService, ctx: AuthContext) -> dict[str, Any]:
             "verification_history": account["verification"]["history"], "sign_ins": sign_ins,
             "requests": list_requests(svc, ctx),
             "note": "Simulated demo activity is marked origin=demo. Internal checks and scores are not part of this export."}
+
+
+# ---------------------------------------------------------------------------------- notifications
+NOTIFY_LINK = {"verification_requested": "/rider/account", "verification_done": "/rider/account", "request_reply": "/rider/help",
+               "new_device": "/rider/account", "sign_in": "/rider/security", "status": "/rider"}
+
+
+def _read_marker(db, ctx: AuthContext):
+    row = db.get(NotificationReadRow, ctx.user_id)
+    if row is not None:
+        return row.last_read_at
+    user = db.get(UserRow, ctx.user_id)
+    return user.created_at if user else utcnow()
+
+
+def notifications(svc: TrustService, ctx: AuthContext, limit: int = 40) -> dict[str, Any]:
+    """The things a rider should notice: team replies, checks asked or finished, new phones and browsers, and the account's status.
+
+    Built from what really happened (no separate fake feed). Unread means newer than the last time they opened the page."""
+    assert ctx.rider_id is not None
+    events = activity_timeline(svc, ctx, 120)
+    with svc.db.session() as db:
+        read_at = _read_marker(db, ctx)
+    state = svc.engine.get_state(ctx.rider_id)
+    key = STATE_FROM_STATUS.get(state.status if state else "active", "ok")
+    items: list[dict[str, Any]] = []
+    story = status_explanation(svc, ctx.rider_id, key)
+    if story is not None:
+        items.append({"id": "status-now", "kind": "status", "at": story["since"], "origin": "recorded", "tone": "check",
+                      "title": {"verification_needed": "Please confirm it is you", "on_hold": "Your payouts are on hold",
+                                "suspended": "Your account is paused"}[key],
+                      "detail": story["what_it_means"], "link": NOTIFY_LINK["status"], "sticky": True})
+    for e in events:
+        if e["kind"] in ("verification_requested", "verification_done", "request_reply", "new_device") or (
+                e["kind"] == "sign_in" and e["tone"] == "noted"):
+            items.append({**{k: e.get(k) for k in ("id", "kind", "at", "origin", "tone", "title", "detail")},
+                          "link": NOTIFY_LINK[e["kind"]], "sticky": False})
+    for item in items:
+        item["unread"] = bool(item["at"] and item["at"] > read_at.isoformat())
+    sticky = [i for i in items if i["sticky"]]
+    rest = sorted((i for i in items if not i["sticky"]), key=lambda i: i["at"] or "", reverse=True)
+    items = (sticky + rest)[:limit]
+    return {"items": items, "unread": sum(1 for i in items if i["unread"]), "last_read_at": read_at.isoformat()}
+
+
+def unread_notifications(svc: TrustService, ctx: AuthContext) -> int:
+    return notifications(svc, ctx, 40)["unread"]
+
+
+def mark_notifications_read(svc: TrustService, ctx: AuthContext) -> dict[str, Any]:
+    now = utcnow()
+    with svc.db.session() as db:
+        row = db.get(NotificationReadRow, ctx.user_id)
+        if row is None:
+            db.add(NotificationReadRow(user_id=ctx.user_id, last_read_at=now))
+        else:
+            row.last_read_at = now
+        db.commit()
+    return notifications(svc, ctx)
+
+
+# ---------------------------------------------------------------------------------- work summary
+def work_summary(svc: TrustService, ctx: AuthContext, days: int = 30) -> dict[str, Any]:
+    """The rider's own sessions for the last ``days`` days up to their latest one: when, where, which phone. Nothing about scoring."""
+    assert ctx.rider_id is not None
+    ensure_rider_row(svc, ctx.rider_id, ctx.name)
+    with svc.db.session() as db:
+        total, first, last = db.execute(select(func.count(), func.min(SessionRow.started_at), func.max(SessionRow.started_at))
+                                        .where(SessionRow.rider_id == ctx.rider_id)).one()
+        rows: list[Any] = []
+        if last is not None:
+            start = last - timedelta(days=days)
+            rows = db.execute(select(SessionRow.started_at, SessionRow.context, SessionRow.source)
+                              .where(SessionRow.rider_id == ctx.rider_id, SessionRow.started_at >= start)
+                              .order_by(SessionRow.started_at).limit(2000)).all()
+    sessions = [{"at": at.isoformat(), "city": ctx_.get("city"), "phone": ctx_.get("device_id"),
+                 "origin": "demo" if _is_demo(src) else "recorded"} for at, ctx_, src in rows]
+    phones = {s["phone"] for s in sessions if s["phone"]}
+    cities: dict[str, int] = {}
+    for s in sessions:
+        if s["city"]:
+            cities[s["city"]] = cities.get(s["city"], 0) + 1
+    return {
+        "days": days,
+        "period": {"from": sessions[0]["at"] if sessions else None, "to": _iso(last)},
+        "sessions": [{"at": s["at"], "city": s["city"], "origin": s["origin"]} for s in sessions],
+        "totals": {"sessions": len(sessions), "active_days": len({s["at"][:10] for s in sessions}),
+                   "phones": len(phones), "cities": [{"city": c, "sessions": n} for c, n in sorted(cities.items(), key=lambda kv: -kv[1])]},
+        "all_time": {"sessions": total or 0, "first_seen": _iso(first), "last_seen": _iso(last)},
+        "includes_demo": any(s["origin"] == "demo" for s in sessions),
+    }
+
+
+def sign_in_history(svc: TrustService, ctx: AuthContext, current_digest: str | None, limit: int = 30) -> list[dict[str, Any]]:
+    with svc.db.session() as db:
+        rows = db.scalars(select(SignInEventRow).where(SignInEventRow.user_id == ctx.user_id)
+                          .order_by(SignInEventRow.at.desc()).limit(limit)).all()
+    return [{"at": _iso(e.at), "browser": e.browser_label, "new_browser": e.is_new_browser,
+             "current": bool(current_digest and e.token_hash == current_digest)} for e in rows]

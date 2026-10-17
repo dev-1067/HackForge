@@ -1,12 +1,15 @@
 import React from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { Activity, LifeBuoy, Settings, ShieldCheck } from 'lucide-react'
+import { Activity, BarChart3, Bell, Lock, LifeBuoy, Settings, ShieldCheck } from 'lucide-react'
 import { AppFrame } from '@/components/layout/AppFrame'
 import { NavSidebar, type NavGroup } from '@/components/layout/NavSidebar'
 import { Alert } from '@/components/ui/Alert'
 import { RiderProvider, useRider } from './RiderContext'
 
 const TITLES: Array<[string, string]> = [
+  ['/rider/summary', 'Work Summary'],
+  ['/rider/notifications', 'Notifications'],
+  ['/rider/security', 'Security'],
   ['/rider/account', 'Account & Verification'],
   ['/rider/help', 'Help & Review'],
   ['/rider/settings', 'Settings'],
@@ -18,8 +21,15 @@ const Sidebar: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
   const groups: NavGroup[] = [{
     items: [
       { to: '/rider', label: 'Recent Activity', icon: Activity, end: true },
+      { to: '/rider/notifications', label: 'Notifications', icon: Bell, count: overview?.unread_notifications ?? 0 },
+      { to: '/rider/summary', label: 'Work Summary', icon: BarChart3 },
       { to: '/rider/account', label: 'Account & Verification', icon: ShieldCheck, attention: overview?.account.action_required },
       { to: '/rider/help', label: 'Help & Review', icon: LifeBuoy },
+    ],
+  }, {
+    heading: 'Account',
+    items: [
+      { to: '/rider/security', label: 'Security', icon: Lock },
       { to: '/rider/settings', label: 'Settings', icon: Settings },
     ],
   }]

@@ -15,6 +15,7 @@ const TITLES: Array<[string, string]> = [
   ['/audit', 'History'],
   ['/simulation', 'Demo lab'],
   ['/analytics', 'How it compares'],
+  ['/database', 'Database'],
   ['/settings', 'Settings'],
 ]
 

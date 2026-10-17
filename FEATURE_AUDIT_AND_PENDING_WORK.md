@@ -93,6 +93,23 @@ Sessions (formula-safe), and a skip-to-content link.
   because the demo data has no GPS; the page says so. Needs internet for the map background (the markers still work without it; the page says when the
   background cannot load).
 
+## 3d. Delivery partner portal: more pages, and a database view
+
+Sidebar is now Recent Activity, **Notifications**, **Work Summary**, Account & Verification, Help & Review, then **Security** and Settings.
+
+- **Notifications** (`GET /me/rider/notifications`, `POST /me/rider/notifications/read`): built from what really happened (team replies, checks asked or finished,
+  new phones, new browsers) plus the pinned account status. Unread means newer than the last time the rider pressed *Mark all as read*; the marker is stored
+  in the new `notification_reads` table, so it survives sign-out and shows as a count in the sidebar. Each item links to the page that handles it.
+- **Work Summary** (`GET /me/rider/summary?days=7..90`): the rider's own sessions up to their latest one: totals, sessions per day, usual hours (in the
+  rider's own time zone), cities, phones used. No scores or reasons. Demo activity is labelled. It does not influence the account.
+- **Security** (`GET /me/sign-ins`, plus the existing password and sessions endpoints): sign-in history, where you are signed in, sign out other sessions,
+  change password, and a warning when a new browser signed in. These panels moved here for riders; company Settings still has them.
+- **Database** page for operations (`GET /db/overview`, `GET /db/tables/{name}`): connection, every table with columns, keys, row counts, browse, search, paging.
+  Read-only (no write routes exist; a test checks the API surface). Secrets are never returned (password hashes, session and CSRF tokens, login-attempt
+  keys); phone numbers and e-mails are masked; only the application's own tables can be read. A test scans every table for hashes, passwords and phone numbers.
+  The new table `notification_reads` is created automatically; no existing table changed.
+- Not built on purpose: earnings or payouts (there is no such data, and it would be invented), and SMS or e-mail alerts (no sending service).
+
 ## 4. API additions (all company-only, backward compatible)
 
 `GET /riders` (+`city`, name/phone search), `GET /riders/{id}/timeline` (+`since`, `until`, `city`, `device`), `GET /decisions` (+`q`, `city`, `zone`,
@@ -131,12 +148,12 @@ Run on SQLite (the default), Python 3.13, Node 22, Chromium via Playwright:
 
 | Check | Result |
 |---|---|
-| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 237 passed |
+| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 247 passed |
 | `python -m pyflakes api engine sim conftest.py` | clean |
 | `npx tsc -b` | no errors |
 | `npm run build` | succeeds |
 | `npm run lint` | 0 errors (warnings about state set in effects remain, as in the existing pages) |
-| `node e2e/smoke.cjs` against a freshly started backend (real Chromium; 69 checks, now including live background cases cleared and suspended by a person, CSV downloads and the fairness panel: sign-in, dashboard, lab, search, filters, lookup, partner portal, dark mode, selection colour, landing text size, ripple, phone layouts, role isolation) | 69/69 passed |
+| `node e2e/smoke.cjs` against a freshly started backend (real Chromium; 73 checks, now including live background cases cleared and suspended by a person, CSV downloads and the fairness panel: sign-in, dashboard, lab, search, filters, lookup, partner portal, dark mode, selection colour, landing text size, ripple, phone layouts, role isolation) | 73/73 passed |
 | Landing page on a 390 px phone | no sideways scroll (was 15 px before this work) |
 
 Not run: Docker build; the new search tests on PostgreSQL.

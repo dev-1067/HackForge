@@ -213,18 +213,16 @@ async function noHorizontalScroll(page) {
     await ops.getByText(/account was cleared/).waitFor()
   })
   await step('needs review: suspending an account works', async () => {
-    const remaining = await ops.getByPlaceholder('Add a note (optional)').count()
-    if (remaining === 0) {
-      await ops.goto(`${BASE}/simulation`)
-      await ops.getByLabel('Rider', { exact: true }).selectOption('R00013')
-      await ops.getByLabel('What happens').selectOption('hard_handoff')
-      await ops.getByLabel('Answer extra checks automatically').uncheck()
-      await ops.getByRole('button', { name: 'Run scenario' }).click()
-      await ops.getByText(/sessions scored/).waitFor({ timeout: 10000 })
-      await ops.getByRole('link', { name: 'Needs review' }).click()
-    }
+    // always raise a fresh case, so this step never depends on what an earlier step left behind
+    await ops.goto(`${BASE}/simulation`)
+    await ops.getByLabel('Rider', { exact: true }).selectOption('R00013')
+    await ops.getByLabel('What happens').selectOption('hard_handoff')
+    await ops.getByLabel('Answer extra checks automatically').uncheck()
+    await ops.getByRole('button', { name: 'Run scenario' }).click()
+    await ops.getByText(/sessions scored/).waitFor({ timeout: 10000 })
+    await ops.getByRole('link', { name: 'Needs review' }).click()
     const card = ops.locator('li').filter({ has: ops.getByPlaceholder('Add a note (optional)') }).first()
-    await card.waitFor({ timeout: 8000 })
+    await card.waitFor({ timeout: 15000 })
     await card.getByRole('button', { name: 'Suspend account' }).click()
     await card.getByRole('button', { name: 'Yes' }).click()
     await ops.getByText(/account was suspended/).waitFor()
@@ -511,6 +509,34 @@ async function noHorizontalScroll(page) {
     await noHorizontalScroll(ops)
   })
 
+  console.log('Database view')
+  await step('database page: connection, tables, columns, rows, search and paging, with secrets hidden', async () => {
+    await go('/database')
+    await ops.getByText('Connected database').waitFor()
+    await ops.getByText(/SQLite|PostgreSQL/).first().waitFor()
+    const tables = ops.getByRole('list', { name: 'Tables' })
+    await tables.getByRole('button', { name: /^users/ }).click()
+    await ops.getByRole('heading', { name: 'users' }).waitFor()
+    await ops.getByText('password_hash').first().waitFor()
+    await ops.locator('table tbody tr').first().waitFor()
+    const body = await ops.locator('main').innerText()
+    expect(body.includes('hidden') && body.includes('••••'), 'secrets are not marked hidden or contact details not masked')
+    expect(!/scrypt\$/.test(body) && !body.includes(PASSWORD), 'a password hash or password is visible')
+    await tables.getByRole('button', { name: /^decisions/ }).click()
+    await ops.getByRole('heading', { name: 'decisions' }).waitFor()
+    await ops.locator('table tbody tr').first().waitFor()
+    await ops.getByRole('button', { name: 'Next' }).click()
+    await ops.getByText(/^26 to 50 of/).waitFor()
+    await ops.getByRole('button', { name: 'Previous' }).click()
+    await ops.getByText(/^1 to 25 of/).waitFor()
+    await tables.getByRole('button', { name: /^riders/ }).click()
+    await ops.getByLabel('Search this table').fill('R00001')
+    await ops.getByText(/^1 row$/).waitFor()
+    await ops.getByLabel('Search this table').fill('zzz-nothing')
+    await ops.getByText('No rows.').waitFor()
+    await noHorizontalScroll(ops)
+  })
+
   console.log('Look and feel')
   await step('dark mode uses neutral graphite, readable text and a clear selection colour', async () => {
     const dark = await newPage({ viewport: { width: 1366, height: 800 } })
@@ -649,15 +675,15 @@ async function noHorizontalScroll(page) {
   console.log('Delivery partner portal')
   let uniqueMsg = ''
   const partner = await newPage({ viewport: { width: 1366, height: 800 } })
-  await step('partner sidebar shows exactly the four simple pages', async () => {
+  await step('partner sidebar shows the portal pages', async () => {
     await partner.goto(`${BASE}/rider/login`)
     await partner.getByLabel('Mobile number').fill(RIDER_PHONE)
     await partner.getByLabel('Password', { exact: true }).fill(PASSWORD)
     await partner.getByRole('button', { name: 'Sign in' }).click()
     await partner.waitForURL(/\/rider$/)
     const nav = partner.getByRole('navigation', { name: 'Partner menu' })
-    for (const name of ['Recent Activity', 'Account & Verification', 'Help & Review', 'Settings']) await nav.getByRole('link', { name }).waitFor()
-    expect(await nav.getByRole('link').count() === 5, 'partner menu should have the logo plus four links')
+    for (const name of ['Recent Activity', 'Notifications', 'Work Summary', 'Account & Verification', 'Help & Review', 'Security', 'Settings']) await nav.getByRole('link', { name: new RegExp(name) }).waitFor()
+    expect(await nav.getByRole('link').count() === 8, 'partner menu should have the logo plus seven links')
     expect(await partner.getByRole('link', { name: 'Dashboard' }).count() === 0, 'company link visible to a partner')
   })
   await step('recent activity lists recorded events; demo data toggle works', async () => {
@@ -722,6 +748,37 @@ async function noHorizontalScroll(page) {
     await partner.reload()
     await partner.getByText('Thanks, we looked and your account is fine.').first().waitFor()
   })
+  await step('notifications: the team reply is unread with a badge, links to help, and can be marked read', async () => {
+    await partner.goto(`${BASE}/rider`)
+    await partner.getByRole('navigation', { name: 'Partner menu' }).getByRole('link', { name: /Notifications/ }).waitFor()
+    await partner.waitForFunction(() => /Notifications\s*\d+/.test(document.querySelector('nav[aria-label="Partner menu"]').innerText), null, { timeout: 15000 })
+    await partner.getByRole('link', { name: /Notifications/ }).click()
+    await partner.waitForURL(/\/rider\/notifications$/)
+    await partner.getByText(/\d+ unread/).waitFor()
+    await partner.getByText('We replied to your request').first().waitFor()
+    await partner.getByText('New', { exact: true }).first().waitFor()
+    await partner.getByRole('button', { name: 'Mark all as read' }).click()
+    await partner.getByText('All caught up').waitFor()
+    expect(!/Notifications\s*\d+/.test(await partner.locator('nav[aria-label="Partner menu"]').innerText()), 'badge still shown after marking read')
+    await partner.reload()
+    await partner.getByText('All caught up').waitFor()
+    await partner.getByText('We replied to your request').first().click()
+    await partner.waitForURL(/\/rider\/help$/)
+  })
+  await step('work summary: totals, charts, period switch and city list show the rider\'s own activity', async () => {
+    await partner.getByRole('link', { name: 'Work Summary' }).click()
+    await partner.waitForURL(/\/rider\/summary$/)
+    await partner.getByText('Days you worked').waitFor()
+    await partner.getByRole('img', { name: 'Bar chart of sessions per day' }).waitFor()
+    await partner.getByRole('img', { name: 'Bar chart of sessions by hour of the day' }).waitFor()
+    await partner.getByText('Where you worked').waitFor()
+    const before = await partner.locator('main').innerText()
+    await partner.getByLabel('Period').selectOption('7')
+    await partner.getByText('of 7').waitFor()
+    await partner.getByLabel('Period').selectOption('90')
+    await partner.getByText('of 90').waitFor()
+    expect(!/evidence|threshold|score|\bL[0-4]\b/i.test(before), 'internal wording on the work summary')
+  })
   await step('settings: text size and theme apply and persist', async () => {
     await partner.getByRole('link', { name: 'Settings' }).click()
     await partner.waitForURL(/\/rider\/settings$/)
@@ -733,9 +790,17 @@ async function noHorizontalScroll(page) {
     expect(await partner.evaluate(() => document.documentElement.dataset.textSize) === 'large', 'text size not remembered')
     await partner.getByRole('radio', { name: 'Light' }).click()
     await partner.getByRole('radio', { name: 'Comfortable' }).click()
-    await partner.getByText('Where you are signed in').waitFor()
+    await partner.getByRole('heading', { name: 'Security' }).waitFor()
   })
-  await step('settings: password form rejects a wrong current password', async () => {
+  await step('security page: sign-in history, sessions, and a wrong current password is refused', async () => {
+    await partner.getByRole('link', { name: 'Open Security' }).click()
+    await partner.waitForURL(/\/rider\/security$/)
+    await partner.getByText('Where you are signed in').waitFor()
+    await partner.getByRole('heading', { name: 'Sign-in history' }).waitFor()
+    await partner.locator('table tbody tr').first().waitFor()
+    expect((await partner.locator('table tbody').innerText()).includes('This browser'), 'current browser not marked')
+  })
+  await step('security: password form rejects a wrong current password', async () => {
     await partner.getByLabel('Current password').fill('not-the-password')
     await partner.getByLabel('New password', { exact: true }).fill('another-pass-99')
     await partner.getByLabel('Confirm new password').fill('another-pass-99')
@@ -743,6 +808,7 @@ async function noHorizontalScroll(page) {
     await partner.getByRole('alert').first().waitFor()
   })
   await step('settings: download my data returns only own data, no secrets', async () => {
+    await partner.goto(`${BASE}/rider/settings`)
     const [download] = await Promise.all([partner.waitForEvent('download'), partner.getByRole('button', { name: 'Download my data' }).click()])
     const body = require('fs').readFileSync(await download.path(), 'utf8')
     expect(body.length > 20, 'empty export')
@@ -803,7 +869,7 @@ async function noHorizontalScroll(page) {
       }
     }
     await partner.setViewportSize({ width: 390, height: 800 })
-    for (const path of ['/rider', '/rider/account', '/rider/help', '/rider/settings']) {
+    for (const path of ['/rider', '/rider/notifications', '/rider/summary', '/rider/account', '/rider/help', '/rider/security', '/rider/settings']) {
       await partner.goto(`${BASE}${path}`)
       await partner.getByRole('button', { name: 'Open menu' }).waitFor()
       await noHorizontalScroll(partner)
@@ -817,7 +883,7 @@ async function noHorizontalScroll(page) {
   await step('search and lookup endpoints stay company-only', async () => {
     const codes = await partner.evaluate(async () => {
       const g = async (u) => (await fetch(u, { credentials: 'include' })).status
-      return [await g('/api/filters'), await g('/api/sessions/x'), await g('/api/audit?q=a'), await g('/api/riders?q=900')]
+      return [await g('/api/filters'), await g('/api/sessions/x'), await g('/api/audit?q=a'), await g('/api/riders?q=900'), await g('/api/db/overview'), await g('/api/db/tables/users')]
     })
     expect(codes.every((c) => c === 403), `a rider reached company search: ${codes}`)
   })
