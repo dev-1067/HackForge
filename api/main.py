@@ -260,7 +260,9 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     @ops.post("/decisions/{decision_id}/review", tags=["decisions"])
     def review_decision(decision_id: int, body: ReviewIn, ctx: AuthContext = Depends(company_user)) -> dict[str, Any]:
         """A reviewer's verdict: confirm a takeover (suspend) or dismiss (clear the account)."""
-        return svc.review_decision(decision_id, body.takeover_confirmed, reviewer=ctx.name, note=body.note)
+        result = svc.review_decision(decision_id, body.takeover_confirmed, reviewer=ctx.name, note=body.note)
+        lab.after_review(result["rider_id"], body.takeover_confirmed)
+        return result
 
 
     @ops.get("/review-requests", tags=["rider requests"])
@@ -342,7 +344,7 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
         """Start or stop the background simulation at ``rate`` sessions per second."""
         if body.action == "start":
             try:
-                lab.start(body.rate, body.auto_resolve)
+                lab.start(body.rate, body.auto_resolve, body.incidents)
             except ValueError as exc:
                 raise HTTPException(422, str(exc)) from None
         else:

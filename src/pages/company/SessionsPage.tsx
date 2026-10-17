@@ -8,7 +8,8 @@ import { Panel } from '@/components/app/Panel'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { LEVEL_LABEL } from '@/lib/plain'
+import { downloadCsv } from '@/lib/csv'
+import { LEVEL_LABEL, describeFlags, explain } from '@/lib/plain'
 import { RANGES, rangeSince, type RangeKey } from '@/lib/ranges'
 import type { Decision, FilterOptions, Level } from '@/types/api'
 
@@ -87,6 +88,17 @@ export const SessionsPage: React.FC = () => {
     } catch (e) { setError((e as Error).message) } finally { setLoadingMore(false) }
   }
 
+  const [exporting, setExporting] = useState(false)
+  async function exportCsv() {
+    setExporting(true)
+    try {
+      const list = await ops.decisions({ ...params, limit: 500 })
+      downloadCsv('sessions.csv', ['Started (UTC)', 'Rider ID', 'Rider name', 'City', 'Area', 'Result', 'Changes noticed', 'Summary', 'Session ID', 'Decision number'],
+        list.map((d) => [d.started_at, d.rider_id, d.rider_name, d.context?.city, d.context?.zone, LEVEL_LABEL[d.level],
+          describeFlags(d.context_flags), explain(d).summary, d.session_id, d.decision_id]))
+    } catch (e) { setError((e as Error).message) } finally { setExporting(false) }
+  }
+
   const active: ActiveFilter[] = [
     query.trim() && { key: 'q', label: `Search: ${query.trim()}`, clear: () => setQuery('') },
     result && { key: 'r', label: LEVEL_LABEL[result as Level], clear: () => setResult('') },
@@ -109,7 +121,10 @@ export const SessionsPage: React.FC = () => {
         <input value={device} onChange={(e) => setDevice(e.target.value)} aria-label="Phone ending" placeholder="Phone ending in…" maxLength={20}
           className="w-full rounded-lg border border-border bg-card px-3 py-2 text-app-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ring/40 lg:w-44" />
       </div>
-      <ActiveFilters filters={active} onClearAll={clearAll} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <ActiveFilters filters={active} onClearAll={clearAll} />
+        <Button variant="secondary" size="sm" loading={exporting} disabled={!rows?.length} onClick={() => void exportCsv()}>Download CSV</Button>
+      </div>
       <p className="text-app-13 text-muted-foreground">Seeing a new phone or place is common and is not proof that an account is shared.</p>
       {error && <Alert tone="error">{error} <button className="underline" onClick={() => void load()}>Try again</button></Alert>}
       {rows === null && !error ? <Spinner label="Loading sessions" /> : (

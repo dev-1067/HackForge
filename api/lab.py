@@ -11,6 +11,7 @@ import random
 import threading
 from typing import Any
 
+from engine.profile import ESCALATED_STATUSES
 from sim.live import LiveWorld
 from sim.records import SessionRecord
 
@@ -21,6 +22,9 @@ from .settings import Settings
 
 class Lab:
     MAX_RATE = 100.0
+    MAX_OPEN_CASES = 6      # background incidents pause while this many cases wait for a person
+    INCIDENT_CHANCE = 0.08  # per background tick
+    INCIDENT_SESSIONS = 40  # how long the lab keeps feeding one incident before giving up
 
     def __init__(self, service: TrustService, settings: Settings) -> None:
         self.service = service
@@ -31,6 +35,8 @@ class Lab:
         self.running = False
         self.rate = 2.0
         self.auto_resolve = True
+        self.incidents = False
+        self.focus: dict[str, int] = {}   # riders with an incident in progress -> sessions left to feed it
         self.generated = 0
         self._lock = threading.RLock()
         self._task: asyncio.Task | None = None
@@ -42,6 +48,7 @@ class Lab:
         with self._lock:
             self.rng = random.Random(s.lab_seed)
             self.blocked.clear()
+            self.focus.clear()
             self.generated = 0
             self.world = LiveWorld(s.lab_riders, s.lab_seed, s.lab_history_days)
             for rider_id in self.world.rider_ids:
@@ -114,7 +121,14 @@ class Lab:
 
     def _pick_rider(self, world: LiveWorld) -> str | None:
         candidates = [r for r in world.rider_ids if r not in self.blocked]
+        if not self.auto_resolve:
+            # riders already waiting for a person stay as they are, so cases pile up for review instead of changing underneath it
+            candidates = [r for r in candidates if not self._waiting(r)]
         return self.rng.choice(candidates) if candidates else None
+
+    def _waiting(self, rider_id: str) -> bool:
+        state = self.service.engine.get_state(rider_id)
+        return state is not None and state.status in ESCALATED_STATUSES
 
     def trigger(self, rider_id: str, scenario: str, steps: int = 0, auto_resolve: bool = True) -> dict[str, Any]:
         with self._lock:
@@ -127,10 +141,55 @@ class Lab:
             decisions = self.step(rider_id, steps, auto_resolve) if steps else []
             return {"triggered": info, "decisions": decisions}
 
+    def _background_step(self) -> None:
+        """One background tick: usually a random rider, sometimes the next session of an incident in progress."""
+        with self._lock:
+            world = self._need_world()
+            if self.incidents and not self.auto_resolve:
+                if (self.rng.random() < self.INCIDENT_CHANCE and len(self.focus) < 3
+                        and self.service.open_case_count() < self.MAX_OPEN_CASES):
+                    self._start_incident(world)
+                if self.focus and self.rng.random() < 0.7:
+                    rider_id = self.rng.choice(sorted(self.focus))
+                    payload = self._ingest(world.next_session(rider_id), source="lab", auto_resolve=False)
+                    self.generated += 1
+                    self.focus[rider_id] -= 1
+                    if payload["status"] not in ("active", "watch") or self.focus[rider_id] <= 0:
+                        self.focus.pop(rider_id, None)
+                    return
+            self.step(None, 1, self.auto_resolve)
+
+    def _start_incident(self, world: LiveWorld) -> None:
+        riders = [r for r in world.rider_ids if r not in self.blocked and r not in self.focus
+                  and not world.meta[r].scenario and not self._waiting(r)]
+        attacks = [c["name"] for c in world.catalog() if c["kind"] == "attack"]
+        if not riders or not attacks:
+            return
+        rider_id, scenario = self.rng.choice(riders), self.rng.choice(attacks)
+        info = world.trigger(rider_id, scenario)
+        self.focus[rider_id] = self.INCIDENT_SESSIONS
+        self.service.bus.publish("lab", {"type": "scenario", **info})
+
+    def after_review(self, rider_id: str, takeover_confirmed: bool) -> None:
+        """A person settled a case. Suspend: the simulated rider stays blocked. Clear: the staged attack ends."""
+        with self._lock:
+            if self.world is None or rider_id not in self.world.sims:
+                return
+            self.focus.pop(rider_id, None)
+            if takeover_confirmed:
+                self.blocked.add(rider_id)
+            else:
+                sim = self.world.sims[rider_id]
+                sim.effects = [e for e in sim.effects if e.kind != "attack"]
+                meta = self.world.meta[rider_id]
+                if meta.scenario_kind == "attack":
+                    meta.scenario_kind, meta.scenario = "", ""
+
     def state(self) -> dict[str, Any]:
         with self._lock:
             world = self._need_world()
             return {"running": self.running, "rate": self.rate, "auto_resolve": self.auto_resolve,
+                    "incidents": self.incidents,
                     "riders": len(world.sims), "blocked": sorted(self.blocked), "generated": self.generated,
                     "active_scenarios": {rid: {"kind": m.scenario_kind, "scenario": m.scenario}
                                          for rid, m in world.meta.items() if m.scenario}}
@@ -139,11 +198,11 @@ class Lab:
         return LiveWorld.catalog()
 
     # ------------------------------------------------------------------ background runner
-    def start(self, rate: float = 2.0, auto_resolve: bool = True) -> None:
+    def start(self, rate: float = 2.0, auto_resolve: bool = True, incidents: bool = False) -> None:
         self._need_world()
         if not 0 < rate <= self.MAX_RATE:
             raise ValueError(f"rate must be in (0, {self.MAX_RATE:g}] sessions per second")
-        self.rate, self.auto_resolve = rate, auto_resolve
+        self.rate, self.auto_resolve, self.incidents = rate, auto_resolve, incidents
         if self.running:
             return
         self.running = True
@@ -164,7 +223,7 @@ class Lab:
             while self.running:
                 started = asyncio.get_running_loop().time()
                 try:
-                    await asyncio.to_thread(self.step, None, 1, self.auto_resolve)
+                    await asyncio.to_thread(self._background_step)
                 except (InvalidState, LabUnavailable):
                     pass
                 delay = max(0.0, 1.0 / self.rate - (asyncio.get_running_loop().time() - started))

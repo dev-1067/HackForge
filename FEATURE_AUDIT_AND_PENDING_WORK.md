@@ -58,6 +58,19 @@ non-live ranges query the stored data, not the live stream. Rider page filters i
   up" bar fills smoothly. All of it is off when the browser asks for reduced motion.
 - Content area widened from 1024 px to 1152 px so wide screens look less empty.
 
+## 3b. Live background activity (fix and additions)
+
+**Bug:** the Demo lab's *Start* button always asked the server to answer every extra check and review automatically, so each case was
+cleared within the same second it was raised. The dashboard briefly showed a case, and by the time you pressed *See all* it was gone.
+**Fix:** *Start* now has "Leave unusual cases for me to review" (on by default). In that mode the background run stages an occasional takeover for one
+rider at a time (at most 3 in progress, paused when 6 cases are waiting), keeps feeding it sessions until it is flagged, and leaves it waiting.
+Riders already waiting are not touched. Clearing a case ends that staged attack; suspending blocks the rider. Turn the option off for the old
+fully automatic behaviour. The dashboard "Needs review" panel now reads the stored open cases (not the short live feed), shows a count, and a bar
+appears on other pages when a new case arrives. API: `POST /lab/run` accepts `incidents` (default false).
+
+Also added: dashboard "Fair to honest riders, firm on takeovers" panel (from the simulation figures, labelled as simulated), *Download CSV* on History and
+Sessions (formula-safe), and a skip-to-content link.
+
 ## 4. API additions (all company-only, backward compatible)
 
 `GET /riders` (+`city`, name/phone search), `GET /riders/{id}/timeline` (+`since`, `until`, `city`, `device`), `GET /decisions` (+`q`, `city`, `zone`,
@@ -96,12 +109,12 @@ Run on SQLite (the default), Python 3.13, Node 22, Chromium via Playwright:
 
 | Check | Result |
 |---|---|
-| `python -m pytest -q` (whole suite, incl. 15 new search/filter/lookup tests) | 224 passed |
+| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 227 passed |
 | `python -m pyflakes api engine sim conftest.py` | clean |
 | `npx tsc -b` | no errors |
 | `npm run build` | succeeds |
 | `npm run lint` | 0 errors (warnings about state set in effects remain, as in the existing pages) |
-| `node e2e/smoke.cjs` against a freshly started backend (real Chromium; 63 checks: sign-in, dashboard, lab, search, filters, lookup, partner portal, dark mode, selection colour, landing text size, ripple, phone layouts, role isolation) | 63/63 passed |
+| `node e2e/smoke.cjs` against a freshly started backend (real Chromium; 66 checks, now including live background cases cleared and suspended by a person, CSV downloads and the fairness panel: sign-in, dashboard, lab, search, filters, lookup, partner portal, dark mode, selection colour, landing text size, ripple, phone layouts, role isolation) | 66/66 passed |
 | Landing page on a 390 px phone | no sideways scroll (was 15 px before this work) |
 
 Not run: Docker build; the new search tests on PostgreSQL.

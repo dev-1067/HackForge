@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { OpsProvider, useOps } from '@/components/app/OpsContext'
 import { Alert } from '@/components/ui/Alert'
 import { cn } from '@/lib/utils'
+import { NewCaseNotice } from '@/components/app/NewCaseNotice'
 import { AppFrame } from './AppFrame'
 import { Sidebar } from './Sidebar'
 
@@ -29,6 +30,7 @@ const Shell: React.FC = () => {
   )
   return (
     <AppFrame title={title} status={status} sidebar={(close) => <Sidebar onNavigate={close} />}>
+      <NewCaseNotice />
       {summaryError && <Alert tone="warning" className="mb-4">{summaryError}</Alert>}
       <Outlet />
     </AppFrame>
