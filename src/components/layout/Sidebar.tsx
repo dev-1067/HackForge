@@ -1,5 +1,5 @@
 import React from 'react'
-import { BarChart3, ClipboardList, FlaskConical, History, LayoutDashboard, Settings, Users } from 'lucide-react'
+import { BarChart3, ClipboardList, ListChecks, FlaskConical, History, LayoutDashboard, Settings, Users } from 'lucide-react'
 import { useOps } from '@/components/app/OpsContext'
 import { NavSidebar, type NavGroup } from './NavSidebar'
 
@@ -13,6 +13,7 @@ export const Sidebar: React.FC<{ onNavigate?: () => void }> = ({ onNavigate }) =
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/review-queue', label: 'Needs review', icon: ClipboardList, count: waiting },
         { to: '/riders', label: 'Riders', icon: Users },
+        { to: '/sessions', label: 'Sessions', icon: ListChecks },
         { to: '/audit', label: 'History', icon: History },
       ],
     },

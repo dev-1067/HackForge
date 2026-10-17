@@ -11,7 +11,7 @@ import { FloatingExploreButton } from '@/components/landing/FloatingExploreButto
 
 export const LandingPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-blue-600/30 selection:text-blue-200">
+    <div className="landing-scale min-h-screen bg-background text-foreground">
       {/* Sticky Header */}
       <LandingHeader />
 

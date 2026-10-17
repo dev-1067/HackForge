@@ -195,19 +195,30 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
         """Report the outcome of a selfie / liveness check that an extra-check decision asked for."""
         return svc.stepup_result(rider_id, body.passed, method=body.method, session_id=body.session_id)
 
+    def bad_range(call):
+        """Turn a bad date or range from the query string into a 422 instead of a crash."""
+        try:
+            return call()
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+
     @ops.get("/riders", tags=["riders"])
-    def list_riders(status: str | None = None, q: str | None = None,
-                    limit: int = Query(100, ge=1, le=500), offset: int = Query(0, ge=0)) -> list[dict[str, Any]]:
-        return svc.list_riders(status=status, q=q, limit=limit, offset=offset)
+    def list_riders(status: str | None = None, q: str | None = Query(None, max_length=80),
+                    city: str | None = None, limit: int = Query(100, ge=1, le=500),
+                    offset: int = Query(0, ge=0)) -> list[dict[str, Any]]:
+        """Search by rider id, name or phone number (partial matches); filter by status and home city."""
+        return svc.list_riders(status=status, q=q, city=city, limit=limit, offset=offset)
 
     @ops.get("/riders/{rider_id}", tags=["riders"])
     def get_rider(rider_id: str) -> dict[str, Any]:
         return svc.rider_detail(rider_id)
 
     @ops.get("/riders/{rider_id}/timeline", tags=["riders"])
-    def rider_timeline(rider_id: str, limit: int = Query(200, ge=1, le=2000)) -> list[dict[str, Any]]:
+    def rider_timeline(rider_id: str, limit: int = Query(200, ge=1, le=2000), since: str | None = None,
+                       until: str | None = None, city: str | None = None,
+                       device: str | None = Query(None, max_length=64)) -> list[dict[str, Any]]:
         """Sessions oldest first, each with its scores. Drives the rider detail chart."""
-        return svc.timeline(rider_id, limit)
+        return bad_range(lambda: svc.timeline(rider_id, limit, since=since, until=until, city=city, device=device))
 
     @ops.get("/riders/{rider_id}/audit", tags=["riders"])
     def rider_audit(rider_id: str, limit: int = Query(100, ge=1, le=1000)) -> list[dict[str, Any]]:
@@ -217,14 +228,34 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     def list_decisions(level: str | None = Query(None, pattern="^L[0-4]$"),
                        min_level: int | None = Query(None, ge=0, le=4), rider_id: str | None = None,
                        unreviewed: bool = False, limit: int = Query(50, ge=1, le=500),
-                       offset: int = Query(0, ge=0)) -> list[dict[str, Any]]:
-        """Newest first. ``unreviewed=true&min_level=2`` is the review queue."""
-        return svc.list_decisions(level=level, min_level=min_level, rider_id=rider_id,
-                                  unreviewed=unreviewed, limit=limit, offset=offset)
+                       offset: int = Query(0, ge=0), q: str | None = Query(None, max_length=80),
+                       city: str | None = None, zone: str | None = None,
+                       device: str | None = Query(None, max_length=64), since: str | None = None,
+                       until: str | None = None,
+                       case_status: str | None = Query(None, pattern="^(pending|completed)$"),
+                       reviewer: str | None = None) -> list[dict[str, Any]]:
+        """Newest first. ``unreviewed=true&min_level=2`` is the review queue.
+
+        ``q`` matches rider id or name; ``since``/``until`` are ISO dates or times (UTC unless an offset is given).
+        ``case_status`` limits to cases that were raised (extra check or worse) and are pending or completed."""
+        return bad_range(lambda: svc.list_decisions(
+            level=level, min_level=min_level, rider_id=rider_id, unreviewed=unreviewed, limit=limit, offset=offset,
+            q=q, city=city, zone=zone, device=device, since=since, until=until, case_status=case_status,
+            reviewer=reviewer))
 
     @ops.get("/decisions/{decision_id}", response_model=DecisionOut, tags=["decisions"])
     def get_decision(decision_id: int) -> dict[str, Any]:
         return svc.get_decision(decision_id)
+
+    @ops.get("/sessions/{session_id}", response_model=DecisionOut, tags=["decisions"])
+    def get_session_decision(session_id: str) -> dict[str, Any]:
+        """The decision for one session, looked up by its session id (not the decision number)."""
+        return svc.get_decision_by_session(session_id)
+
+    @ops.get("/filters", tags=["decisions"])
+    def filter_options() -> dict[str, Any]:
+        """Cities, zones, history actions and reviewers that exist in the data, for filter drop-downs."""
+        return svc.filter_options()
 
     @ops.post("/decisions/{decision_id}/review", tags=["decisions"])
     def review_decision(decision_id: int, body: ReviewIn, ctx: AuthContext = Depends(company_user)) -> dict[str, Any]:
@@ -244,8 +275,12 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
         return partner.respond_to_request(svc, request_id, body.action, body.note, ctx.name)
 
     @ops.get("/audit", tags=["decisions"])
-    def audit(limit: int = Query(100, ge=1, le=1000)) -> list[dict[str, Any]]:
-        return svc.audit_log(None, limit)
+    def audit(limit: int = Query(100, ge=1, le=1000), offset: int = Query(0, ge=0),
+              q: str | None = Query(None, max_length=80), action: str | None = None, reviewer: str | None = None,
+              since: str | None = None, until: str | None = None) -> list[dict[str, Any]]:
+        """History, newest first. ``q`` matches rider id or name, the action and who did it."""
+        return bad_range(lambda: svc.audit_log(None, limit, offset=offset, q=q, action=action, reviewer=reviewer,
+                                               since=since, until=until))
 
     @ops.get("/stream", tags=["stream"])
     async def stream(request: Request) -> StreamingResponse:

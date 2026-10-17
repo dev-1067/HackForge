@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.orm import Session as DbSession
 
 from engine import MODEL_VERSION, Session, TrustEngine, load_default_engine, load_engine
@@ -38,6 +38,46 @@ def decision_payload(row: DecisionRow, started_at: datetime | None = None) -> di
         "review_verdict": row.review_verdict, "reviewed_by": row.reviewed_by,
         "reviewed_at": row.reviewed_at.isoformat() if row.reviewed_at else None,
     }
+
+
+def parse_ts(value: str | datetime | None, field: str = "date") -> datetime | None:
+    """Accept an ISO date or datetime; anything without a time zone is read as UTC. Returns naive UTC."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        text = str(value).strip().replace("Z", "+00:00").replace("z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            raise ValueError(f"'{value}' is not a valid {field}; use a date like 2026-03-31") from None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
+def time_window(since: str | datetime | None, until: str | datetime | None) -> tuple[datetime | None, datetime | None]:
+    start, end = parse_ts(since, "start date"), parse_ts(until, "end date")
+    if start and end and start > end:
+        raise ValueError("The start date is after the end date.")
+    return start, end
+
+
+def _like(term: str) -> str:
+    return "%" + term.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
+def rider_match(term: str, id_column=None):
+    """SQL condition: the rider id, the rider's name or (digits only) their phone contains ``term``."""
+    term = term.strip()
+    like = _like(term)
+    id_column = RiderRow.rider_id if id_column is None else id_column
+    conds = [func.lower(id_column).like(like, escape="\\"), func.lower(UserRow.name).like(like, escape="\\")]
+    digits = "".join(ch for ch in term if ch.isdigit())
+    if len(digits) >= 3 and len(digits) >= len(term.replace(" ", "").replace("-", "").replace("+", "")):
+        conds.append(UserRow.phone.like("%" + digits + "%"))
+    return or_(*conds)
 
 
 def rider_names(db: DbSession, rider_ids: set[str] | list[str]) -> dict[str, str]:
@@ -237,28 +277,35 @@ class TrustService:
                 "level_counts": {lvl: counts.get(lvl, 0) for lvl in LEVELS},
             }
 
-    def list_riders(self, *, status: str | None = None, q: str | None = None, limit: int = 100,
-                    offset: int = 0) -> list[dict[str, Any]]:
+    def list_riders(self, *, status: str | None = None, q: str | None = None, city: str | None = None,
+                    limit: int = 100, offset: int = 0) -> list[dict[str, Any]]:
         with self.db.session() as db:
-            stmt = select(RiderRow).order_by(RiderRow.last_seen_at.desc().nullslast(), RiderRow.rider_id)
+            stmt = select(RiderRow).outerjoin(UserRow, UserRow.rider_id == RiderRow.rider_id)
             if status:
                 stmt = stmt.where(RiderRow.status == status)
-            if q:
-                stmt = stmt.where(RiderRow.rider_id.like(f"%{q}%"))
-            rows = db.scalars(stmt.limit(limit).offset(offset)).all()
+            if city:
+                stmt = stmt.where(RiderRow.home_city == city)
+            order = [RiderRow.last_seen_at.desc().nullslast(), RiderRow.rider_id]
+            if q and q.strip():
+                stmt = stmt.where(rider_match(q))
+                order.insert(0, case((func.lower(RiderRow.rider_id) == q.strip().lower(), 0), else_=1))
+            rows = db.scalars(stmt.order_by(*order).limit(limit).offset(offset)).all()
             names = rider_names(db, [r.rider_id for r in rows])
             return [{"rider_id": r.rider_id, "name": names.get(r.rider_id), "archetype": r.archetype, "home_city": r.home_city,
                      "status": r.status, "sessions_seen": r.sessions_seen, "last_level": r.last_level,
                      "last_evidence": r.last_evidence,
                      "last_seen_at": r.last_seen_at.isoformat() if r.last_seen_at else None} for r in rows]
 
-    def timeline(self, rider_id: str, limit: int = 200) -> list[dict[str, Any]]:
+    def timeline(self, rider_id: str, limit: int = 200, *, since: str | None = None, until: str | None = None,
+                 city: str | None = None, device: str | None = None) -> list[dict[str, Any]]:
+        start, end = time_window(since, until)
         with self.db.session() as db:
             if db.get(RiderRow, rider_id) is None:
                 raise UnknownRider(rider_id)
-            rows = db.execute(
-                select(SessionRow, DecisionRow).join(DecisionRow, DecisionRow.session_id == SessionRow.session_id)
-                .where(SessionRow.rider_id == rider_id).order_by(SessionRow.started_at.desc()).limit(limit)).all()
+            stmt = select(SessionRow, DecisionRow).join(
+                DecisionRow, DecisionRow.session_id == SessionRow.session_id).where(SessionRow.rider_id == rider_id)
+            stmt = self._session_filters(stmt, start, end, city, None, device)
+            rows = db.execute(stmt.order_by(SessionRow.started_at.desc()).limit(limit)).all()
             items = []
             for s, d in reversed(rows):
                 items.append({
@@ -271,20 +318,51 @@ class TrustService:
                     "actor": s.gt_actor, "label": s.gt_label})
             return items
 
+    @staticmethod
+    def _session_filters(stmt, start, end, city, zone, device):
+        """Shared time, place and phone filters over the sessions table."""
+        if start:
+            stmt = stmt.where(SessionRow.started_at >= start)
+        if end:
+            stmt = stmt.where(SessionRow.started_at <= end)
+        if city:
+            stmt = stmt.where(SessionRow.context["city"].as_string() == city)
+        if zone:
+            stmt = stmt.where(SessionRow.context["zone"].as_string() == zone)
+        if device:
+            stmt = stmt.where(func.lower(SessionRow.context["device_id"].as_string()).like(_like(device), escape="\\"))
+        return stmt
+
     def list_decisions(self, *, level: str | None = None, min_level: int | None = None,
                        rider_id: str | None = None, unreviewed: bool = False, limit: int = 50,
-                       offset: int = 0) -> list[dict[str, Any]]:
+                       offset: int = 0, q: str | None = None, city: str | None = None, zone: str | None = None,
+                       device: str | None = None, since: str | None = None, until: str | None = None,
+                       case_status: str | None = None, reviewer: str | None = None,
+                       session_id: str | None = None) -> list[dict[str, Any]]:
+        start, end = time_window(since, until)
         with self.db.session() as db:
             stmt = select(DecisionRow, SessionRow).join(
                 SessionRow, SessionRow.session_id == DecisionRow.session_id).order_by(DecisionRow.decision_id.desc())
+            if q and q.strip():
+                stmt = stmt.outerjoin(UserRow, UserRow.rider_id == DecisionRow.rider_id).where(
+                    rider_match(q, DecisionRow.rider_id))
             if level:
                 stmt = stmt.where(DecisionRow.level == level)
             if min_level is not None:
                 stmt = stmt.where(DecisionRow.level_num >= min_level)
             if rider_id:
                 stmt = stmt.where(DecisionRow.rider_id == rider_id)
+            if session_id:
+                stmt = stmt.where(DecisionRow.session_id == session_id)
             if unreviewed:
                 stmt = stmt.where(DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None))
+            if case_status == "pending":
+                stmt = stmt.where(DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None))
+            elif case_status == "completed":
+                stmt = stmt.where(DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_not(None))
+            if reviewer:
+                stmt = stmt.where(DecisionRow.reviewed_by == reviewer)
+            stmt = self._session_filters(stmt, start, end, city, zone, device)
             rows = db.execute(stmt.limit(limit).offset(offset)).all()
             names = rider_names(db, [d.rider_id for d, _ in rows])
             out = []
@@ -302,19 +380,70 @@ class TrustService:
                 DecisionRow.decision_id == decision_id)).first()
             if row is None:
                 raise UnknownDecision(str(decision_id))
-            payload = decision_payload(row[0], row[1])
-            session = db.get(SessionRow, row[0].session_id)
-            payload["session"] = {"context": session.context, "habit": session.habit}
-            payload["rider_name"] = rider_names(db, [row[0].rider_id]).get(row[0].rider_id)
-            return payload
+            return self._decision_detail(db, row[0], row[1])
 
-    def audit_log(self, rider_id: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    def get_decision_by_session(self, session_id: str) -> dict[str, Any]:
         with self.db.session() as db:
-            stmt = select(AuditRow).order_by(AuditRow.id.desc()).limit(limit)
+            row = db.execute(select(DecisionRow, SessionRow.started_at).join(
+                SessionRow, SessionRow.session_id == DecisionRow.session_id).where(
+                DecisionRow.session_id == session_id)).first()
+            if row is None:
+                raise UnknownDecision(session_id)
+            return self._decision_detail(db, row[0], row[1])
+
+    def _decision_detail(self, db: DbSession, decision: DecisionRow, started_at: datetime) -> dict[str, Any]:
+        payload = decision_payload(decision, started_at)
+        session = db.get(SessionRow, decision.session_id)
+        payload["session"] = {"context": session.context, "habit": session.habit}
+        payload["rider_name"] = rider_names(db, [decision.rider_id]).get(decision.rider_id)
+        rider = db.get(RiderRow, decision.rider_id)
+        summary = self.engine.rider_summary(decision.rider_id) or {}
+        payload["rider"] = {"rider_id": decision.rider_id, "home_city": rider.home_city if rider else None,
+                            "status": summary.get("status", rider.status if rider else None),
+                            "baseline": summary.get("baseline", {}), "known_cities": summary.get("known_cities", [])}
+        payload["source"] = session.source
+        return payload
+
+    def filter_options(self) -> dict[str, Any]:
+        """Values for the filter drop-downs, taken from what is actually stored."""
+        with self.db.session() as db:
+            city = SessionRow.context["city"].as_string()
+            zone = SessionRow.context["zone"].as_string()
+            cities = [c for (c,) in db.execute(select(city).distinct().order_by(city).limit(200)) if c]
+            zones = [z for (z,) in db.execute(select(zone).distinct().order_by(zone).limit(300)) if z]
+            actions = [a for (a,) in db.execute(select(AuditRow.action).distinct().order_by(AuditRow.action))]
+            reviewers = [r for (r,) in db.execute(select(DecisionRow.reviewed_by).where(
+                DecisionRow.reviewed_by.is_not(None), DecisionRow.reviewed_by != "rider").distinct().order_by(
+                DecisionRow.reviewed_by))]
+            return {"cities": cities, "zones": zones, "audit_actions": actions, "reviewers": reviewers}
+
+    def audit_log(self, rider_id: str | None = None, limit: int = 100, *, offset: int = 0, q: str | None = None,
+                  action: str | None = None, reviewer: str | None = None, since: str | None = None,
+                  until: str | None = None) -> list[dict[str, Any]]:
+        start, end = time_window(since, until)
+        with self.db.session() as db:
+            stmt = select(AuditRow).order_by(AuditRow.id.desc())
             if rider_id:
                 stmt = stmt.where(AuditRow.rider_id == rider_id)
-            return [{"id": a.id, "rider_id": a.rider_id, "actor": a.actor, "action": a.action,
-                     "details": a.details, "at": a.at.isoformat()} for a in db.scalars(stmt)]
+            if q and q.strip():
+                like = _like(q.strip())
+                stmt = stmt.outerjoin(UserRow, UserRow.rider_id == AuditRow.rider_id).where(or_(
+                    func.lower(AuditRow.rider_id).like(like, escape="\\"),
+                    func.lower(UserRow.name).like(like, escape="\\"),
+                    func.lower(AuditRow.action).like(like, escape="\\"),
+                    func.lower(AuditRow.actor).like(like, escape="\\")))
+            if action:
+                stmt = stmt.where(AuditRow.action == action)
+            if reviewer:
+                stmt = stmt.where(AuditRow.actor.in_((reviewer, f"reviewer:{reviewer}")))
+            if start:
+                stmt = stmt.where(AuditRow.at >= start)
+            if end:
+                stmt = stmt.where(AuditRow.at <= end)
+            rows = db.scalars(stmt.limit(limit).offset(offset)).all()
+            names = rider_names(db, [a.rider_id for a in rows if a.rider_id])
+            return [{"id": a.id, "rider_id": a.rider_id, "rider_name": names.get(a.rider_id) if a.rider_id else None,
+                     "actor": a.actor, "action": a.action, "details": a.details, "at": a.at.isoformat()} for a in rows]
 
     # ------------------------------------------------------------------ metrics
     def metrics_summary(self) -> dict[str, Any]:

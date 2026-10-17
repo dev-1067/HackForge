@@ -118,13 +118,23 @@ export function explain(d: Pick<Decision, 'level' | 'context_flags' | 'reasons'>
   return { summary, bullets }
 }
 
+/** The server stores UTC times without a zone marker; read them as UTC so every viewer sees the right local time. */
+export function parseUtc(iso: string): Date {
+  return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : iso + 'Z')
+}
+
 export function whenText(iso: string | null | undefined): string {
   if (!iso) return '—'
-  const date = new Date(iso)
+  const date = parseUtc(iso)
   const diffMin = Math.round((Date.now() - date.getTime()) / 60000)
   if (diffMin >= 0 && diffMin < 1) return 'just now'
   if (diffMin >= 0 && diffMin < 60) return `${diffMin} min ago`
   return date.toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+export function fullTime(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return parseUtc(iso).toLocaleString([], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 export const pct = (value: number, digits = 1) => `${(value * 100).toFixed(digits)}%`
@@ -143,6 +153,20 @@ export function auditSentence(entry: { action: string; actor: string; details: R
     default:
       if (entry.action.startsWith('request_')) return 'The rider sent a request.'
       return entry.action.replace(/_/g, ' ')
+  }
+}
+
+export function actionLabel(action: string): string {
+  switch (action) {
+    case 'review_dismissed': return 'Account cleared'
+    case 'review_confirmed_takeover': return 'Account suspended'
+    case 'stepup_passed': return 'Extra check passed'
+    case 'stepup_failed': return 'Extra check not passed'
+    case 'request_start_review': return 'Request review started'
+    case 'request_resolve': return 'Request resolved'
+    case 'request_decline': return 'Request closed'
+    case 'request_device_change': return 'Phone reported by rider'
+    default: return action.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
   }
 }
 

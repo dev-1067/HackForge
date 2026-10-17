@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { Header } from './Header'
 
@@ -13,6 +14,7 @@ interface AppFrameProps {
 /** Sidebar on large screens, a slide-in menu on phones, a header, and a scrolling page body. */
 export const AppFrame: React.FC<AppFrameProps> = ({ title, status, sidebar, children }) => {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       <div className="hidden lg:block">{sidebar()}</div>
@@ -30,7 +32,7 @@ export const AppFrame: React.FC<AppFrameProps> = ({ title, status, sidebar, chil
       <div className="flex h-full min-w-0 flex-1 flex-col">
         <Header title={title} status={status} onMenu={() => setMenuOpen(true)} />
         <main className="flex-1 overflow-y-auto px-4 py-5 md:px-6">
-          <div className="mx-auto max-w-5xl">{children}</div>
+          <div key={pathname} className="tj-page mx-auto max-w-6xl">{children}</div>
         </main>
       </div>
     </div>

@@ -10,7 +10,7 @@ export const Panel: React.FC<{
   className?: string
   flush?: boolean
 }> = ({ title, note, action, children, className, flush }) => (
-  <section className={cn('rounded-xl border border-border bg-card', className)}>
+  <section className={cn('tj-rise rounded-xl border border-border bg-card', className)}>
     {(title || action) && (
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
         <div className="min-w-0">

@@ -147,3 +147,10 @@ Partner pages: Recent Activity `/rider`, Account & Verification `/rider/account`
 New tables `sign_in_events` and `review_requests` are created automatically by `create_all` on start-up (no change to existing tables) and are not cleared by the demo reset.
 
 The end-to-end check (`e2e/smoke.cjs`) should be run against a freshly started backend.
+
+## Search, filters and lookup (operations)
+
+`GET /riders?q=&status=&city=`, `GET /decisions?q=&case_status=pending|completed&level=&city=&zone=&device=&since=&until=&reviewer=`,
+`GET /sessions/{session_id}` (by session ID; `/decisions/{id}` is by decision number), `GET /filters` (drop-down values),
+`GET /audit?q=&action=&reviewer=&since=&until=&limit=&offset=`, `GET /riders/{id}/timeline?since=&until=&city=&device=`.
+Dates are ISO dates or times, read as UTC unless an offset is given. Bad input returns 422. All are company-only. No schema changes.

@@ -22,6 +22,8 @@ import { AccountPage } from '@/pages/rider/AccountPage'
 import { HelpPage } from '@/pages/rider/HelpPage'
 import { RecentActivityPage } from '@/pages/rider/RecentActivityPage'
 import { RiderLayout } from '@/pages/rider/RiderLayout'
+import { SessionsPage } from '@/pages/company/SessionsPage'
+import { SessionDetailPage } from '@/pages/company/SessionDetailPage'
 import { SettingsPage } from '@/pages/shared/SettingsPage'
 
 export function App() {
@@ -54,6 +56,8 @@ export function App() {
               <Route path="/review-queue" element={<NeedsReviewPage />} />
               <Route path="/riders" element={<RidersPage />} />
               <Route path="/riders/:riderId" element={<RiderDetailPage />} />
+              <Route path="/sessions" element={<SessionsPage />} />
+              <Route path="/sessions/:kind/:id" element={<SessionDetailPage />} />
               <Route path="/audit" element={<HistoryPage />} />
               <Route path="/simulation" element={<DemoLabPage />} />
               <Route path="/analytics" element={<ComparePage />} />

@@ -48,6 +48,14 @@ export interface Decision {
   ground_truth?: { actor: 'owner' | 'other'; label: string } | null
   resolution?: { stepup?: string; review?: string; blocked?: boolean } | null
   session?: { context: Record<string, string>; habit: Record<string, number> } | null
+  rider?: { rider_id: string; home_city: string | null; status: string | null; baseline: Record<string, number>; known_cities: string[] } | null
+}
+
+export interface FilterOptions {
+  cities: string[]
+  zones: string[]
+  audit_actions: string[]
+  reviewers: string[]
 }
 
 export interface MetricsSummary {
@@ -118,6 +126,7 @@ export interface TimelineItem {
 export interface AuditEntry {
   id: number
   rider_id: string | null
+  rider_name?: string | null
   actor: string
   action: string
   details: Record<string, unknown>

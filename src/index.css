@@ -25,29 +25,34 @@
     --input: 140 10% 90%;
     --ring: 160 59% 15%;
     --radius: 0.75rem;
+    --selection: 214 95% 82%;
+    --selection-foreground: 220 25% 10%;
   }
 
   .dark {
-    /* Deep Obsidian Forest Dark Mode */
-    --background: 160 56% 7%; /* #081C15 deep forest obsidian */
-    --foreground: 140 20% 96%; /* #F1F5F2 */
-    --card: 160 48% 12%; /* #0F3124 rich dark green card */
-    --card-foreground: 140 20% 96%;
-    --popover: 160 48% 12%;
-    --popover-foreground: 140 20% 96%;
-    --primary: 152 69% 45%; /* #10B981 emerald green */
-    --primary-foreground: 160 56% 7%;
-    --secondary: 160 38% 17%;
-    --secondary-foreground: 140 20% 96%;
-    --muted: 160 38% 17%;
-    --muted-foreground: 140 15% 65%;
-    --accent: 84 81% 44%;
-    --accent-foreground: 160 56% 7%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 140 20% 96%;
-    --border: 160 35% 19%; /* #1B4536 */
-    --input: 160 35% 19%;
-    --ring: 152 69% 45%;
+    /* Neutral graphite, the same family of greys the Chrome browser uses in dark mode.
+       The forest green stays only as the accent, so text and cards read clearly. */
+    --background: 225 6% 13%; /* #202124 */
+    --foreground: 210 14% 92%; /* #E8EAED */
+    --card: 220 6% 17%; /* #292A2D */
+    --card-foreground: 210 14% 92%;
+    --popover: 220 6% 17%;
+    --popover-foreground: 210 14% 92%;
+    --primary: 150 52% 52%; /* #4DCB8A readable accent on graphite */
+    --primary-foreground: 225 10% 9%;
+    --secondary: 220 6% 22%; /* #35363A */
+    --secondary-foreground: 210 14% 92%;
+    --muted: 220 6% 22%;
+    --muted-foreground: 215 8% 68%; /* #A8AEB7, 6.6:1 on the background */
+    --accent: 84 70% 52%;
+    --accent-foreground: 225 10% 9%;
+    --destructive: 0 72% 62%;
+    --destructive-foreground: 210 14% 96%;
+    --border: 215 6% 26%; /* #3C4043 */
+    --input: 215 6% 26%;
+    --ring: 150 52% 52%;
+    --selection: 214 75% 38%;
+    --selection-foreground: 0 0% 100%;
   }
 
   * {
@@ -60,6 +65,12 @@
     overflow-x: hidden;
   }
 }
+
+/* Selected text: clear contrast in both themes (it used to inherit a pale blue on pale blue). */
+::selection { background: hsl(var(--selection)); color: hsl(var(--selection-foreground)); }
+::-moz-selection { background: hsl(var(--selection)); color: hsl(var(--selection-foreground)); }
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
 
 /* Custom scrollbars for data tables and logs */
 ::-webkit-scrollbar {
@@ -76,8 +87,9 @@
   border-radius: 9999px;
 }
 
+
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.18);
+  background: rgba(168, 174, 183, 0.28);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -101,11 +113,53 @@
 }
 
 /* Text size for the signed-in app (Settings > Appearance). Only app-* font sizes read this. */
-:root { --tj-scale: 1.08; }
+:root { --tj-scale: 1.12; }
 :root[data-text-size='standard'] { --tj-scale: 1; }
-:root[data-text-size='comfortable'] { --tj-scale: 1.08; }
-:root[data-text-size='large'] { --tj-scale: 1.2; }
+:root[data-text-size='comfortable'] { --tj-scale: 1.12; }
+:root[data-text-size='large'] { --tj-scale: 1.26; }
+
+/* ---- Motion ---------------------------------------------------------------------------
+   Short, purposeful: pages and panels ease in, buttons answer a press with a small ripple.
+   All of it is switched off for people who ask for reduced motion. */
+@keyframes tj-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes tj-ripple { from { transform: scale(0); opacity: 0.35; } to { transform: scale(1); opacity: 0; } }
+@keyframes tj-ring { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.4); opacity: 0; } }
+
+.tj-page { animation: tj-page-in 0.32s cubic-bezier(0.22, 0.8, 0.3, 1) both; }
+.tj-rise { animation: tj-page-in 0.4s cubic-bezier(0.22, 0.8, 0.3, 1) both; }
+.tj-rise:nth-child(2) { animation-delay: 0.04s; }
+.tj-rise:nth-child(3) { animation-delay: 0.08s; }
+.tj-rise:nth-child(4) { animation-delay: 0.12s; }
+.tj-ring { animation: tj-ring 2.2s ease-out infinite; }
+
+button:not(:disabled), [role='button'], a.tj-press, a[class*='bg-'][class*='rounded'] { transition: transform 0.12s ease, background-color 0.15s ease, opacity 0.15s ease, box-shadow 0.2s ease; }
+button:not(:disabled):active, a.tj-press:active, a[class*='bg-'][class*='rounded']:active { transform: scale(0.97); }
+.tj-hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.tj-hover-lift:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -12px hsl(var(--foreground) / 0.35); }
+
+.tj-ripple { position: absolute; border-radius: 9999px; background: currentColor; pointer-events: none; transform: scale(0); animation: tj-ripple 0.55s ease-out forwards; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-spin { animation-duration: 2.4s; }
+  .tj-page, .tj-rise, .tj-ring, .tj-ripple { animation: none; }
+  button:not(:disabled):active, a.tj-press:active, a[class*='bg-'][class*='rounded']:active, .tj-hover-lift:hover { transform: none; }
+}
+
+/* Public landing page: its small print was too small to read comfortably. Only text sizes change.
+   Phones get a milder step so the badges and pills do not outgrow the screen. */
+.landing-scale .text-\[11px\] { font-size: 0.8125rem; line-height: 1.25rem; }
+.landing-scale .text-\[13px\] { font-size: 0.9375rem; line-height: 1.4rem; }
+.landing-scale .text-xs { font-size: 0.875rem; line-height: 1.35rem; }
+.landing-scale .text-sm { font-size: 1rem; line-height: 1.55rem; }
+.landing-scale .text-base { font-size: 1.125rem; line-height: 1.7rem; }
+.landing-scale .text-lg { font-size: 1.25rem; line-height: 1.8rem; }
+.landing-scale .text-xl { font-size: 1.4rem; line-height: 1.9rem; }
+
+@media (max-width: 639px) {
+  .landing-scale .text-\[11px\] { font-size: 0.75rem; line-height: 1.1rem; }
+  .landing-scale .text-xs { font-size: 0.8125rem; line-height: 1.25rem; }
+  .landing-scale .text-sm { font-size: 0.9375rem; line-height: 1.45rem; }
+  .landing-scale .text-base { font-size: 1.0625rem; line-height: 1.6rem; }
+  .landing-scale .text-lg { font-size: 1.1875rem; line-height: 1.7rem; }
+  .landing-scale .whitespace-nowrap { white-space: normal; }
 }
