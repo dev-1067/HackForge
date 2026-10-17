@@ -39,6 +39,7 @@ class Settings:
     lab_seed: int = 11
     lab_owner_stepup_fail: float = 0.02       # simulated owner fails a selfie check
     lab_impostor_stepup_pass: float = 0.10    # simulated impostor passes a selfie check
+    stepup_expiry_minutes: int = 60           # an unanswered extra check becomes an on-hold case for a person (0 = never)
     snapshot_every: int = 5                   # persist rider state every N quiet sessions
 
     # accounts and sessions
@@ -69,6 +70,7 @@ class Settings:
             lab_riders=int(env("TJ_LAB_RIDERS", cls.lab_riders)),
             lab_history_days=int(env("TJ_LAB_HISTORY_DAYS", cls.lab_history_days)),
             lab_seed=int(env("TJ_LAB_SEED", cls.lab_seed)),
+            stepup_expiry_minutes=int(env("TJ_STEPUP_EXPIRY_MINUTES", cls.stepup_expiry_minutes)),
             company_name=env("TJ_COMPANY_NAME", cls.company_name),
             company_invite_code=env("TJ_COMPANY_INVITE_CODE", ""),
             ingest_key=env("TJ_INGEST_KEY", ""),

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ops } from '@/api/endpoints'
+import { RiderMap } from '@/components/app/RiderMap'
 import { CountUp } from '@/components/app/CountUp'
 import { SelectFilter, useDebounced } from '@/components/app/FilterBar'
 import { RANGES, rangeSince, type RangeKey } from '@/lib/ranges'
@@ -75,25 +76,26 @@ export const DashboardPage: React.FC = () => {
   const q = useDebounced(search.trim())
 
   // A date range reads the stored sessions, so it is not limited to what has streamed in since the page opened.
+  // "Needs attention" also reads the stored sessions: the live feed only holds the last few dozen, which are almost always normal.
+  const fromServer = range !== 'live' || filter === 'attention'
   useEffect(() => {
-    if (range === 'live') { setHistory(null); return }
+    if (!fromServer) { setHistory(null); return }
     let live = true
-    setHistory(null); setHistoryError('')
-    ops.decisions({ since: rangeSince(range), q, min_level: filter === 'attention' ? 2 : undefined, limit: 15 })
+    setHistoryError('')
+    ops.decisions({ since: range === 'live' ? undefined : rangeSince(range), q, min_level: filter === 'attention' ? 2 : undefined, limit: 15 })
       .then((rows) => { if (live) setHistory(rows) })
       .catch((e) => { if (live) setHistoryError((e as Error).message) })
     return () => { live = false }
-  }, [range, q, filter])
+  }, [fromServer, range, q, filter, changeTick])
 
   const rows = useMemo(() => {
-    if (range !== 'live') return history ?? []
+    if (fromServer) return history ?? []
     const q = search.trim().toLowerCase()
     return recent.filter((d) => {
-      if (filter === 'attention' && (d.level === 'L0' || d.level === 'L1')) return false
       if (!q) return true
       return [d.rider_id, d.rider_name, d.context?.city, d.context?.zone].some((v) => v?.toLowerCase().includes(q))
     })
-  }, [recent, filter, search, range, history])
+  }, [recent, filter, search, fromServer, history])
 
   // Open cases come from the server, not from the short live feed, so they stay until a person decides.
   const [pending, setPending] = useState<Decision[]>([])
@@ -133,14 +135,8 @@ export const DashboardPage: React.FC = () => {
         <Stat label="Extra checks asked" value={summary.stepup_rate} format={(n) => pct(n)} note="of all sessions" />
       </div>
 
-      <Fairness sim={summary.simulation} />
-
-      <OutcomeMix counts={summary.level_counts} total={summary.sessions_scored} />
-
       <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="Activity compared with usual" note="Blue dots mark a new phone or place." className="lg:col-span-2">
-          <TrendChart data={chart} />
-        </Panel>
+        <RiderMap />
 
         <Panel
           title={`Needs review${cases.length ? ` (${cases.length})` : ''}`}
@@ -166,6 +162,16 @@ export const DashboardPage: React.FC = () => {
             </ul>
           )}
         </Panel>
+      </div>
+
+      <Fairness sim={summary.simulation} />
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Panel title="Activity compared with usual" note="Blue dots mark a new phone or place." className="lg:col-span-2">
+          <TrendChart data={chart} />
+        </Panel>
+
+        <OutcomeMix counts={summary.level_counts} total={summary.sessions_scored} />
       </div>
 
       <Panel
@@ -199,12 +205,12 @@ export const DashboardPage: React.FC = () => {
         }
       >
         {historyError && <p role="alert" className="px-4 py-3 text-app-sm text-rose-700 dark:text-rose-400">{historyError}</p>}
-        {range !== 'live' && history === null && !historyError ? (
+        {fromServer && history === null && !historyError ? (
           <div className="p-6"><Spinner label="Loading sessions" /></div>
         ) : (
           <DecisionTable
             decisions={rows.slice(0, 15)}
-            emptyText={filter === 'attention' || search || range !== 'live' ? 'Nothing matches. Try a wider date range or clear a filter.' : undefined}
+            emptyText={filter === 'attention' ? 'No sessions have needed attention in this period. That is good news.' : search || range !== 'live' ? 'Nothing matches. Try a wider date range or clear a filter.' : undefined}
           />
         )}
         <div className="border-t border-border px-4 py-2 text-right text-app-13">

@@ -12,6 +12,7 @@ import { StatusPill } from '@/components/ui/StatusPill'
 import { whenText, type Tone } from '@/lib/plain'
 import type { AccountOverview, DeviceInfo } from '@/types/api'
 import { useRider } from './RiderContext'
+import { StatusStory } from './StatusStory'
 import { VerificationPrompt } from './VerificationPrompt'
 
 const STATE_TONE: Record<string, Tone> = { ok: 'ok', verification_needed: 'attention', on_hold: 'serious', suspended: 'serious' }
@@ -110,6 +111,8 @@ export const AccountPage: React.FC = () => {
           Latest verification: {verification.latest_event_at ? whenText(verification.latest_event_at) : 'none yet'}
         </p>
       </Panel>
+
+      {data.explanation && <StatusStory story={data.explanation} />}
 
       {verification.outstanding && (
         <Panel title="Please complete the requested verification">

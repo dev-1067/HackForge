@@ -1,7 +1,7 @@
 import { API_BASE, request } from './http'
 import type {
   AccountOverview, ActiveSession, ActivityEvent, HelpRequest, TeamRequest,
-  AuditEntry, CompareData, Decision, FilterOptions, LabState, MetricsSummary, RiderDetail, RiderListItem, RiderOverview,
+  AuditEntry, CompareData, Decision, FilterOptions, MapRider, LabState, MetricsSummary, RiderDetail, RiderListItem, RiderOverview,
   Scenario, Session, TimelineItem,
 } from '@/types/api'
 
@@ -63,6 +63,7 @@ export const ops = {
   audit: (params: Record<string, string | number | undefined> = {}) => request<AuditEntry[]>(`/audit?${qs(params)}`),
   sessionLookup: (sessionId: string) => request<Decision>(`/sessions/${encodeURIComponent(sessionId)}`),
   filters: () => request<FilterOptions>('/filters'),
+  map: (city?: string) => request<MapRider[]>(`/map/riders?${qs({ city })}`),
   requests: (params: { status?: string; rider_id?: string } = {}) =>
     request<TeamRequest[]>(`/review-requests?${qs(params)}`),
   respond: (id: number, action: 'start_review' | 'resolve' | 'decline', note?: string) =>

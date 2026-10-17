@@ -122,9 +122,10 @@ async function noHorizontalScroll(page) {
     }
   })
   await step('the "Needs attention" filter and search work', async () => {
-    await ops.getByRole('button', { name: 'Needs attention' }).click()
+    const sessionsFilter = ops.getByRole('group', { name: 'Filter sessions' })
+    await sessionsFilter.getByRole('button', { name: 'Needs attention' }).click()
     await ops.waitForTimeout(200)
-    await ops.getByRole('button', { name: 'All', exact: true }).click()
+    await sessionsFilter.getByRole('button', { name: 'All', exact: true }).click()
     await ops.getByLabel('Search sessions').fill('zzz-no-match')
     await ops.getByText('Nothing matches').waitFor()
     await ops.getByLabel('Search sessions').fill('')
@@ -152,6 +153,14 @@ async function noHorizontalScroll(page) {
   await step('an unknown rider id shows a friendly message', async () => {
     await ops.goto(`${BASE}/riders/NOPE-123`)
     await ops.getByText(/could not find a rider/).waitFor()
+  })
+
+  // leftovers from earlier runs would hit the limit of open help requests per rider
+  await ops.evaluate(async () => {
+    const me = await (await fetch('/api/auth/me', { credentials: 'include' })).json()
+    const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': me.csrf_token }
+    const open = await (await fetch('/api/review-requests?status=active&limit=300', { credentials: 'include' })).json()
+    for (const r of open) await fetch(`/api/review-requests/${r.id}/respond`, { method: 'POST', credentials: 'include', headers, body: JSON.stringify({ action: 'decline', note: 'test cleanup' }) })
   })
 
   console.log('Demo lab, review and history')
@@ -404,6 +413,7 @@ async function noHorizontalScroll(page) {
     await ops.waitForURL(/\/review-queue/)
     const cards = ops.locator('li').filter({ has: ops.getByPlaceholder('Add a note (optional)') })
     await cards.first().waitFor({ timeout: 10000 })
+    await ops.waitForFunction(() => document.querySelectorAll('input[placeholder="Add a note (optional)"]').length >= 2, null, { timeout: 20000 })
     const before = await cards.count()
     expect(before >= 2, `only ${before} case card(s) visible`)
     await ops.waitForTimeout(2500)
@@ -443,6 +453,62 @@ async function noHorizontalScroll(page) {
     const [d2] = await Promise.all([ops.waitForEvent('download'), ops.getByRole('button', { name: 'Download CSV' }).click()])
     const csv2 = require('fs').readFileSync(await d2.path(), 'utf8')
     expect(csv2.includes('Session ID') && csv2.split('\n').length > 2, 'sessions csv looks empty')
+  })
+
+  console.log('Map and live filters')
+  await step('dashboard "Needs attention" shows real flagged sessions, not just the last few live ones', async () => {
+    await go('/dashboard')
+    await ops.getByRole('group', { name: 'Filter sessions' }).getByRole('button', { name: 'Needs attention' }).click()
+    await ops.locator('table tbody tr').first().waitFor({ timeout: 10000 })
+    const text = await ops.locator('table tbody').innerText()
+    expect(/Extra check|On hold|Suspended/.test(text), 'needs-attention list has no flagged sessions')
+    await ops.getByLabel('Search sessions').fill('zzz-no-match')
+    await ops.getByText(/No sessions have needed attention|Nothing matches/).waitFor()
+    await ops.getByLabel('Search sessions').fill('')
+    await ops.getByRole('group', { name: 'Filter sessions' }).getByRole('button', { name: 'All', exact: true }).click()
+  })
+  await step('the rider map groups riders by city, zooms into a city, filters, and opens a rider', async () => {
+    await go('/dashboard')
+    const mapBox = ops.getByRole('region', { name: 'Map of riders' })
+    await mapBox.waitFor()
+    await ops.waitForFunction(() => document.querySelectorAll('.tj-map path.leaflet-interactive').length >= 3, null, { timeout: 15000 })
+    await ops.getByText(/\d+ of \d+ shown/).waitFor()
+    const clickMarker = async () => {
+      await mapBox.scrollIntoViewIfNeeded()
+      const spot = await ops.evaluate(() => {
+        const box = document.querySelector('.tj-map').getBoundingClientRect()
+        for (const el of document.querySelectorAll('.tj-map path.leaflet-interactive')) {
+          const r = el.getBoundingClientRect()
+          const x = r.x + r.width / 2, y = r.y + r.height / 2
+          if (r.width > 0 && x > box.x + 60 && x < box.right - 20 && y > box.y + 10 && y < box.bottom - 10) return { x, y }
+        }
+        return null
+      })
+      expect(spot !== null, 'no marker is visible on the map')
+      await ops.mouse.click(spot.x, spot.y)
+    }
+    // zoomed out: one marker per city; clicking one zooms in on that city
+    await clickMarker()
+    await ops.waitForFunction(() => document.querySelector('select[aria-label="City on the map"]').value !== '', null, { timeout: 8000 })
+    const city = await ops.getByLabel('City on the map').inputValue()
+    expect(['Pune', 'Mumbai', 'Bengaluru', 'Delhi', 'Hyderabad', 'Chennai', 'Kolkata', 'Ahmedabad'].includes(city), `unexpected city ${city}`)
+    await ops.waitForTimeout(500)
+    const riders = await ops.locator('.tj-map path.leaflet-interactive').count()
+    expect(riders >= 1, 'no riders drawn for the city')
+    // filter to riders needing attention, then back
+    await ops.getByRole('group', { name: 'Show riders' }).getByRole('button', { name: 'Needs attention' }).click()
+    await ops.waitForTimeout(500)
+    expect(await ops.locator('.tj-map path.leaflet-interactive').count() <= riders, 'attention filter added riders')
+    await ops.getByRole('group', { name: 'Show riders' }).getByRole('button', { name: 'All riders' }).click()
+    await ops.waitForTimeout(500)
+    // a rider marker opens a popup with a working link
+    await clickMarker()
+    await ops.getByRole('link', { name: 'Open rider' }).waitFor()
+    await ops.getByRole('link', { name: 'Open rider' }).click()
+    await ops.waitForURL(/\/riders\/R/)
+    await go('/dashboard')
+    await ops.getByRole('region', { name: 'Map of riders' }).waitFor()
+    await noHorizontalScroll(ops)
   })
 
   console.log('Look and feel')
@@ -692,6 +758,43 @@ async function noHorizontalScroll(page) {
     const unsafe = await partner.evaluate(async () => (await fetch('/api/me/rider/requests', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status)
     expect(unsafe === 403, `POST without CSRF answered ${unsafe}`)
   })
+  await step('a paused rider sees why, with proof, and the help button works end to end', async () => {
+    const opsApi = (path, body) => ops.evaluate(async ([p, b]) => {
+      const me = await (await fetch('/api/auth/me', { credentials: 'include' })).json()
+      const r = await fetch('/api' + p, { method: b ? 'POST' : 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': me.csrf_token }, body: b ? JSON.stringify(b) : undefined })
+      return r.json()
+    }, [path, body])
+    await opsApi('/lab/scenario', { rider_id: 'R00001', scenario: 'hard_handoff', steps: 14, auto_resolve: false })
+    const cases = await opsApi('/decisions?case_status=pending&q=R00001&limit=1')
+    expect(cases.length === 1, 'no case was raised for R00001')
+    await opsApi(`/decisions/${cases[0].decision_id}/review`, { takeover_confirmed: true, note: 'private note that must not show' })
+    await partner.setViewportSize({ width: 1366, height: 800 })
+    await partner.goto(`${BASE}/rider`)
+    await partner.getByText('Your account is paused.').waitFor()
+    await partner.getByRole('heading', { name: 'Why your account is paused' }).waitFor()
+    await partner.getByText('What we noticed').waitFor()
+    await partner.getByText('Sessions that stood out').waitFor()
+    await partner.getByText(/decided by our team/).waitFor()
+    await partner.getByText('What you can do').waitFor()
+    const text = await partner.locator('main').innerText()
+    expect(!text.includes('private note') && !/evidence|threshold|\bL[0-4]\b|score/i.test(text), 'internal wording or private note visible to the rider')
+    await partner.getByRole('link', { name: 'Ask for a review' }).click()
+    await partner.waitForURL(/\/rider\/help/)
+    expect(await partner.getByLabel('What do you need?').inputValue() === 'human_review', 'help form was not preselected')
+    const msg = await partner.getByLabel('Tell us what happened').inputValue()
+    expect(msg.startsWith('Please review my account again'), 'help message was not prefilled')
+    await partner.getByLabel('Tell us what happened').fill(msg + 'I bought a new phone last week and shared it with nobody.')
+    await partner.getByRole('button', { name: 'Send request' }).click()
+    await partner.getByText('Your request was sent to our team.').waitFor()
+    // the team sees it, and restores the account afterwards
+    const reqs = await opsApi('/review-requests?status=active&rider_id=R00001')
+    expect(reqs.some((r) => r.message.includes('I bought a new phone last week')), 'the team cannot see the rider request')
+    const again = await opsApi('/decisions?q=R00001&limit=1')
+    await opsApi(`/decisions/${again[0].decision_id}/review`, { takeover_confirmed: false, note: 'restored after test' })
+    await partner.goto(`${BASE}/rider`)
+    await partner.getByText('Your account is in good standing.').waitFor()
+  })
+
   await step('partner pages fit a phone screen', async () => {
     if (SHOTS) {
       for (const [path, name] of [['/rider', 'activity'], ['/rider/account', 'account'], ['/rider/help', 'help'], ['/rider/settings', 'settings']]) {

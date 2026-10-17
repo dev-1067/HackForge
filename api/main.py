@@ -45,7 +45,18 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
         if settings.lab_enabled and settings.reset_on_start:
             await asyncio.to_thread(lab.build)
         await asyncio.to_thread(seed_demo_accounts, auth, settings)
+
+        async def sweep():
+            while True:
+                await asyncio.sleep(60)
+                try:
+                    await asyncio.to_thread(svc.expire_stepups)
+                except Exception:   # a failed sweep must never take the service down
+                    pass
+
+        sweeper = asyncio.create_task(sweep())
         yield
+        sweeper.cancel()
         lab.stop()
         svc.close()
 
@@ -251,6 +262,11 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     def get_session_decision(session_id: str) -> dict[str, Any]:
         """The decision for one session, looked up by its session id (not the decision number)."""
         return svc.get_decision_by_session(session_id)
+
+    @ops.get("/map/riders", tags=["riders"])
+    def map_riders(city: str | None = None, limit: int = Query(500, ge=1, le=1000)) -> list[dict[str, Any]]:
+        """Each rider's last known city and area (from their latest session) with their current status."""
+        return svc.rider_map(city, limit)
 
     @ops.get("/filters", tags=["decisions"])
     def filter_options() -> dict[str, Any]:

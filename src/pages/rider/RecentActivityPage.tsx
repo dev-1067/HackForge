@@ -11,6 +11,7 @@ import { whenText, type Tone } from '@/lib/plain'
 import { cn } from '@/lib/utils'
 import type { ActivityEvent } from '@/types/api'
 import { useRider } from './RiderContext'
+import { StatusStory } from './StatusStory'
 import { VerificationPrompt } from './VerificationPrompt'
 
 const DOT: Record<ActivityEvent['tone'], string> = { normal: 'bg-emerald-500', noted: 'bg-slate-400', check: 'bg-amber-500' }
@@ -48,6 +49,8 @@ export const RecentActivityPage: React.FC = () => {
           ))}
         </Panel>
       )}
+
+      {overview?.explanation && <StatusStory story={overview.explanation} />}
 
       {error && <Alert tone="error">{error}</Alert>}
 

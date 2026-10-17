@@ -15,7 +15,7 @@ from .auth import AuthContext
 from .errors import InvalidState, UnknownRider, ValidationFailed
 from .models import (REQUEST_KINDS, AuditRow, DecisionRow, ReviewRequestRow, SessionRow, SignInEventRow, StepupRow,
                      UserRow)
-from .portal import STATE_FROM_STATUS, STATE_TEXT, ensure_rider_row
+from .portal import STATE_FROM_STATUS, STATE_TEXT, ensure_rider_row, status_explanation
 from .service import TrustService, rider_names, utcnow
 
 DEMO_SOURCES = ("seed", "lab")
@@ -250,6 +250,7 @@ def account_overview(svc: TrustService, ctx: AuthContext) -> dict[str, Any]:
     return {
         "profile": profile,
         "status": {"state": key, "headline": headline, "detail": detail, "action_required": outstanding is not None},
+        "explanation": status_explanation(svc, ctx.rider_id, key),
         "verification": {"outstanding": outstanding, "history": history, "latest_event_at": latest_event},
         "devices": devices, "recent_device_changes": recent_changes, "checkup": checkup,
     }

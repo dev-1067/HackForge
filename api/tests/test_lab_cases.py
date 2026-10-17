@@ -12,7 +12,10 @@ def wait_for(predicate, seconds=25):
     return None
 
 
-def start_manual(client, rate=100):
+def start_manual(client, rate=100, fast=True):
+    if fast:    # the real pacing is slow on purpose; the tests that are not about pacing shorten it
+        client.app.state.lab.MIN_GAP_SECONDS = 0.3
+        client.app.state.lab.COOLDOWN_SECONDS = 0.0
     return client.post("/lab/run", json={"action": "start", "rate": rate, "auto_resolve": False, "incidents": True}).json()
 
 
@@ -52,3 +55,38 @@ def test_automatic_mode_still_answers_everything(client):
     time.sleep(0.8)
     client.post("/lab/run", json={"action": "stop"})
     assert client.get("/lab/state").json()["incidents"] is False
+
+
+def test_a_settled_case_is_not_replaced_a_second_later(client):
+    """Real pacing: after a person decides a case, nothing new is staged straight away and the count does not refill."""
+    start_manual(client, fast=False)
+    first = wait_for(lambda: client.get("/decisions?case_status=pending&limit=200").json() or None)
+    assert first, "no case appeared"
+    wait_for(lambda: client.get("/metrics/summary").json()["open_cases"] >= 1)
+    decision = client.get("/decisions?case_status=pending&limit=1").json()[0]
+    assert client.post(f"/decisions/{decision['decision_id']}/review", json={"takeover_confirmed": True}).status_code == 200
+    remaining = client.get("/metrics/summary").json()["open_cases"]
+    time.sleep(4)
+    after = client.get("/metrics/summary").json()["open_cases"]
+    client.post("/lab/run", json={"action": "stop"})
+    assert after <= remaining, f"a new case appeared right after a decision ({remaining} -> {after})"
+    assert client.app.state.lab.MAX_OPEN_CASES == 4
+
+
+def test_the_queue_stays_bounded_and_the_run_waits_for_a_person(client):
+    lab = client.app.state.lab
+    start_manual(client)
+    wait_for(lambda: client.get("/metrics/summary").json()["open_cases"] >= lab.MAX_OPEN_CASES, seconds=40)
+    time.sleep(2.5)
+    state = client.get("/lab/state").json()
+    count = client.get("/metrics/summary").json()["open_cases"]
+    generated = state["generated"]
+    time.sleep(1.5)
+    assert client.get("/metrics/summary").json()["open_cases"] == count <= lab.MAX_OPEN_CASES
+    assert client.get("/lab/state").json()["generated"] == generated          # paused, not piling on
+    assert state["waiting_for_review"] is True
+    # a decision frees a place and the run carries on
+    case = client.get("/decisions?case_status=pending&limit=1").json()[0]
+    client.post(f"/decisions/{case['decision_id']}/review", json={"takeover_confirmed": False})
+    assert wait_for(lambda: client.get("/lab/state").json()["generated"] > generated, seconds=10)
+    client.post("/lab/run", json={"action": "stop"})

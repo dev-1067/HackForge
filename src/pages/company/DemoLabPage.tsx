@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { lab, ops } from '@/api/endpoints'
 import { useOps } from '@/components/app/OpsContext'
@@ -136,7 +137,7 @@ export const DemoLabPage: React.FC = () => {
               className="mt-0.5 h-4 w-4 accent-[#0F3B2C]" />
             <span>
               <span className="font-medium text-foreground">Leave unusual cases for me to review</span>
-              <span className="block text-app-13 text-muted-foreground">Now and then a takeover is staged. It waits in Needs review until you clear or suspend the account, instead of being answered automatically.</span>
+              <span className="block text-app-13 text-muted-foreground">About one takeover every half minute is staged for a rider (never more than 4 waiting). Each waits in Needs review until you clear or suspend the account. After you decide, nothing new is staged for 30 seconds.</span>
             </span>
           </label>
           <div className="mt-3 flex items-center gap-2">
@@ -145,8 +146,13 @@ export const DemoLabPage: React.FC = () => {
             ) : (
               <Button loading={busy === 'start'} onClick={() => void run('start', () => lab.run('start', rate, leaveForReview), () => leaveForReview ? 'Background activity started. Cases will wait in Needs review.' : 'Background activity started.')}>Start</Button>
             )}
-            <span className="text-app-13 text-muted-foreground">{state?.running ? 'Running' : 'Stopped'} · {state?.generated ?? 0} sessions so far</span>
+            <span className="text-app-13 text-muted-foreground">{state?.running ? (state.waiting_for_review ? 'Paused, waiting for you' : 'Running') : 'Stopped'} · {state?.generated ?? 0} sessions so far</span>
           </div>
+          {state?.running && state.waiting_for_review && (
+            <p className="mt-2 text-app-13 text-amber-700 dark:text-amber-400">
+              Four cases are waiting. New sessions are on hold until you <Link to="/review-queue" className="font-medium underline">review them</Link>.
+            </p>
+          )}
           <div className="mt-4 border-t border-border pt-3">
             {confirmReset ? (
               <div className="flex flex-wrap items-center gap-2">

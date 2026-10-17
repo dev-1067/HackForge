@@ -163,3 +163,13 @@ button:not(:disabled):active, a.tj-press:active, a[class*='bg-'][class*='rounded
   .landing-scale .text-lg { font-size: 1.1875rem; line-height: 1.7rem; }
   .landing-scale .whitespace-nowrap { white-space: normal; }
 }
+
+/* Rider map: dark theme darkens the tiles; flagged riders and fresh sessions pulse. */
+.dark .tj-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.92) saturate(0.7); }
+.tj-map .leaflet-popup-content-wrapper, .tj-map .leaflet-popup-tip { background: hsl(var(--card)); color: hsl(var(--card-foreground)); }
+.tj-map .leaflet-popup-content a { color: hsl(var(--foreground)); }
+.tj-map .leaflet-container { font: inherit; }
+@keyframes tj-map-pulse { from { stroke-opacity: 0.9; stroke-width: 3; } to { stroke-opacity: 0; stroke-width: 1; } }
+.tj-map-pulse { animation: tj-map-pulse 1.6s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) { .tj-map-pulse { animation: none; stroke-opacity: 0.4; } }
+.tj-map .leaflet-marker-icon.tj-map-count { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); pointer-events: none; }

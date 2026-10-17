@@ -51,6 +51,7 @@ class DecisionOut(BaseModel):
     resolution: dict[str, Any] | None = Field(None, description="Lab only: how the step-up / review played out.")
     session: dict[str, Any] | None = Field(None, description="Full context and habit values (single-decision lookups).")
     rider: dict[str, Any] | None = Field(None, description="Rider status, home city and usual pattern (single lookups).")
+    awaiting_rider_since: str | None = Field(None, description="When an unanswered extra check for this rider was asked (open cases only).")
 
 
 class StepupIn(BaseModel):

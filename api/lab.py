@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import random
 import threading
+import time
 from typing import Any
 
 from engine.profile import ESCALATED_STATUSES
@@ -22,8 +23,10 @@ from .settings import Settings
 
 class Lab:
     MAX_RATE = 100.0
-    MAX_OPEN_CASES = 6      # background incidents pause while this many cases wait for a person
-    INCIDENT_CHANCE = 0.08  # per background tick
+    MAX_OPEN_CASES = 4      # background incidents pause while this many cases wait for a person
+    INCIDENT_CHANCE = 0.15  # per background tick, once an incident is allowed
+    MIN_GAP_SECONDS = 25.0  # at least this long between two staged incidents
+    COOLDOWN_SECONDS = 30.0 # after a person settles a case, nothing new is staged for this long
     INCIDENT_SESSIONS = 40  # how long the lab keeps feeding one incident before giving up
 
     def __init__(self, service: TrustService, settings: Settings) -> None:
@@ -36,6 +39,9 @@ class Lab:
         self.rate = 2.0
         self.auto_resolve = True
         self.incidents = False
+        self.last_incident = 0.0
+        self._open_value, self._open_at = 0, 0.0
+        self.cooldown_until = 0.0
         self.focus: dict[str, int] = {}   # riders with an incident in progress -> sessions left to feed it
         self.generated = 0
         self._lock = threading.RLock()
@@ -73,6 +79,8 @@ class Lab:
             rec.to_payload(), source=source, publish=publish,
             ground_truth={"actor": rec.gt_actor, "label": rec.gt_label})
         payload["resolution"] = self._resolve(rec, payload, publish) if auto_resolve else None
+        if int(payload["level"][1]) >= 2:
+            self._open_at = 0.0      # the number of open cases just changed
         return payload
 
     def _resolve(self, rec: SessionRecord, payload: dict[str, Any], publish: bool) -> dict[str, Any] | None:
@@ -145,9 +153,13 @@ class Lab:
         """One background tick: usually a random rider, sometimes the next session of an incident in progress."""
         with self._lock:
             world = self._need_world()
+            if not self.auto_resolve and self._open_cases() >= self.MAX_OPEN_CASES:
+                return          # the queue is full: wait for a person instead of piling more cases on
             if self.incidents and not self.auto_resolve:
-                if (self.rng.random() < self.INCIDENT_CHANCE and len(self.focus) < 3
-                        and self.service.open_case_count() < self.MAX_OPEN_CASES):
+                now = time.monotonic()
+                if (now >= self.cooldown_until and now - self.last_incident >= self.MIN_GAP_SECONDS
+                        and self.rng.random() < self.INCIDENT_CHANCE and len(self.focus) < 2
+                        and self._open_cases() < self.MAX_OPEN_CASES):
                     self._start_incident(world)
                 if self.focus and self.rng.random() < 0.7:
                     rider_id = self.rng.choice(sorted(self.focus))
@@ -159,6 +171,13 @@ class Lab:
                     return
             self.step(None, 1, self.auto_resolve)
 
+    def _open_cases(self) -> int:
+        """Open cases, looked up at most once a second (the background run can tick up to 100 times a second)."""
+        now = time.monotonic()
+        if now - self._open_at >= 1.0:
+            self._open_value, self._open_at = self.service.open_case_count(), now
+        return self._open_value
+
     def _start_incident(self, world: LiveWorld) -> None:
         riders = [r for r in world.rider_ids if r not in self.blocked and r not in self.focus
                   and not world.meta[r].scenario and not self._waiting(r)]
@@ -168,6 +187,7 @@ class Lab:
         rider_id, scenario = self.rng.choice(riders), self.rng.choice(attacks)
         info = world.trigger(rider_id, scenario)
         self.focus[rider_id] = self.INCIDENT_SESSIONS
+        self.last_incident = time.monotonic()
         self.service.bus.publish("lab", {"type": "scenario", **info})
 
     def after_review(self, rider_id: str, takeover_confirmed: bool) -> None:
@@ -176,6 +196,8 @@ class Lab:
             if self.world is None or rider_id not in self.world.sims:
                 return
             self.focus.pop(rider_id, None)
+            self.cooldown_until = time.monotonic() + self.COOLDOWN_SECONDS
+            self._open_at = 0.0
             if takeover_confirmed:
                 self.blocked.add(rider_id)
             else:
@@ -190,6 +212,7 @@ class Lab:
             world = self._need_world()
             return {"running": self.running, "rate": self.rate, "auto_resolve": self.auto_resolve,
                     "incidents": self.incidents,
+                    "waiting_for_review": bool(self.running and not self.auto_resolve and self._open_cases() >= self.MAX_OPEN_CASES),
                     "riders": len(world.sims), "blocked": sorted(self.blocked), "generated": self.generated,
                     "active_scenarios": {rid: {"kind": m.scenario_kind, "scenario": m.scenario}
                                          for rid, m in world.meta.items() if m.scenario}}
