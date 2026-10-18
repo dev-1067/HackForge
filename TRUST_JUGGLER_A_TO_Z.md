@@ -15,7 +15,7 @@ This file is the one place that explains the whole project: the idea, how it wor
 | Who uses it | **Operations team** (company portal) and **delivery partners** (riders) |
 | Stack | Python 3.13, FastAPI, SQLAlchemy 2, SQLite (default) or PostgreSQL; React 19, Vite 8, TypeScript, Tailwind 3, react-router 7, Recharts, Leaflet |
 | Data | 100% simulated (sixty simulated riders, about 3,000 sessions after a fresh start) |
-| Tests | 250 backend tests, 76 browser checks, type check, production build, lint (all passing at the last run) |
+| Tests | 253 backend tests, 76 browser checks, type check, production build, lint (all passing at the last run) |
 
 ---
 
@@ -166,7 +166,7 @@ Interactive docs while running: `http://localhost:8000/docs`. All unsafe methods
 | `GET /metrics/summary`, `GET /metrics/compare` | numbers, comparison data |
 | `GET /stream` | Server-Sent Events: `decision`, `stepup`, `review`, `lab` |
 | `GET /db/overview`, `GET /db/tables/{name}` | read-only database view |
-| `GET /lab/scenarios`, `GET /lab/state`, `POST /lab/scenario`, `POST /lab/step`, `POST /lab/run`, `POST /lab/reset` | simulation lab |
+| `GET /lab/scenarios`, `GET /lab/state`, `POST /lab/scenario`, `POST /lab/restore/{rider_id}`, `POST /lab/step`, `POST /lab/run`, `POST /lab/reset` | simulation lab |
 
 **Rider portal (rider only)**
 `GET /me/rider`, `POST /me/rider/verification`, `GET /me/rider/activity`, `GET /me/rider/account`, `POST /me/rider/device-change`, `GET/POST /me/rider/requests`, `GET /me/rider/notifications`, `POST /me/rider/notifications/read`, `GET /me/rider/summary?days=7..90`, `GET /me/rider/export`
@@ -246,12 +246,12 @@ python -m sim.generate --riders 100 --days 30 --out data   # raw CSV dataset
 
 | Check | Result at the last run |
 |---|---|
-| `python -m pytest -q` (engine, simulator, API, accounts, partner portal, search, live cases, notifications, database view) | 250 passed (about 7 minutes) |
+| `python -m pytest -q` (engine, simulator, API, accounts, partner portal, search, live cases, notifications, database view) | 253 passed (about 7 minutes) |
 | `python -m pyflakes api engine sim conftest.py scripts` | clean |
 | `npx tsc -b` | no errors |
 | `npm run build` | succeeds |
 | `npm run lint` | 0 errors (warnings about setting state inside effects remain) |
-| `node e2e/smoke.cjs` (real Chromium, 76 checks: both portals, every sidebar link, search and filters, lookup, live cases cleared and suspended by a person, map, notifications, work summary, security, CSV downloads, dark mode, selection colour, ripple, phone layouts, role isolation) | 76 / 76 |
+| `node e2e/smoke.cjs` (real Chromium, 77 checks: both portals, every sidebar link, search and filters, lookup, live cases cleared and suspended by a person, map, notifications, work summary, security, CSV downloads, dark mode, selection colour, ripple, phone layouts, role isolation) | 77 / 77 |
 
 Run the browser checks against a **freshly started backend** (`NODE_PATH=$(npm root -g) node e2e/smoke.cjs`); leftovers from earlier runs can trip a few steps.
 

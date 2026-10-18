@@ -254,6 +254,33 @@ class TrustService:
         self.bus.publish("review", result)
         return result
 
+    def restore_rider(self, rider_id: str, *, actor: str = "lab", reason: str = "restored by the demo lab") -> dict[str, Any]:
+        """Put a rider's account back to normal (used by the Demo lab to start a scenario from a clean account).
+
+        Open cases are closed as dismissed by ``actor``, a pending extra check is closed, and the action is written to the
+        history, so nothing is hidden. The rider's learned pattern is kept."""
+        with self.lock, self.db.session() as db:
+            state = self.engine.get_state(rider_id)
+            if state is None:
+                raise UnknownRider(rider_id)
+            before = state.status
+            if before in ESCALATED_STATUSES:
+                self.engine.report_review(rider_id, False)
+            now = utcnow()
+            closed = db.execute(update(DecisionRow).where(
+                DecisionRow.rider_id == rider_id, DecisionRow.level_num >= 2, DecisionRow.review_verdict.is_(None)).values(
+                review_verdict="dismissed", reviewed_by=actor, reviewed_at=now)).rowcount
+            for pending in db.scalars(select(StepupRow).where(StepupRow.rider_id == rider_id, StepupRow.result == "pending")):
+                pending.result, pending.resolved_at, pending.method = "reset", now, "demo_lab"
+            self._sync_rider(db, rider_id)
+            self._save_profile(db, rider_id)
+            db.add(AuditRow(rider_id=rider_id, actor=actor, action="account_restored",
+                            details={"from": before, "cases_closed": closed, "reason": reason}, at=now))
+            db.commit()
+        result = {"rider_id": rider_id, "from": before, "status": self.engine.get_state(rider_id).status, "cases_closed": closed}
+        self.bus.publish("review", {"rider_id": rider_id, "verdict": "restored", **result})
+        return result
+
     def expire_stepups(self, now: datetime | None = None) -> list[str]:
         """An extra check nobody answers does not wait forever.
 

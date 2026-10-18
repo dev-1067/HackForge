@@ -147,6 +147,8 @@ export function auditSentence(entry: { action: string; actor: string; details: R
   switch (entry.action) {
     case 'review_dismissed': return `Cleared the account after review.${note}`
     case 'review_confirmed_takeover': return `Suspended the account after review.${note}`
+    case 'account_restored': return 'The demo lab restored the account to normal.'
+    case 'stepup_expired': return 'The rider did not answer the extra check, so the account was put on hold for a person to decide.'
     case 'stepup_passed': return 'The rider passed the extra check.'
     case 'stepup_failed': return 'The rider did not pass the extra check; payouts were held.'
     case 'request_start_review': return 'Started reviewing a rider request.'
@@ -163,6 +165,8 @@ export function actionLabel(action: string): string {
   switch (action) {
     case 'review_dismissed': return 'Account cleared'
     case 'review_confirmed_takeover': return 'Account suspended'
+    case 'account_restored': return 'Account restored (demo lab)'
+    case 'stepup_expired': return 'Extra check expired'
     case 'stepup_passed': return 'Extra check passed'
     case 'stepup_failed': return 'Extra check not passed'
     case 'request_start_review': return 'Request review started'
