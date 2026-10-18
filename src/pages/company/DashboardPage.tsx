@@ -141,21 +141,31 @@ export const DashboardPage: React.FC = () => {
         <Panel
           title={`Needs review${cases.length ? ` (${cases.length})` : ''}`}
           action={<Link to="/review-queue" className="text-app-13 font-medium text-foreground underline underline-offset-2">See all</Link>}
+          className="flex flex-col h-full"
+          bodyClassName="flex-1 flex flex-col min-h-0"
           flush
         >
           {cases.length === 0 ? (
             <p className="px-4 py-8 text-center text-app-sm text-muted-foreground">No cases need your attention right now.</p>
           ) : (
-            <ul className="max-h-72 divide-y divide-border overflow-y-auto">
+            <ul className="flex-1 divide-y divide-border overflow-y-auto max-h-[460px]">
               {cases.map((d) => (
                 <li key={d.decision_id}>
-                  <Link to="/review-queue" className="block px-4 py-2.5 hover:bg-secondary/40 focus:outline-none focus-visible:bg-secondary/40">
+                  <Link to="/review-queue" className="block px-4 py-3 hover:bg-secondary/40 focus:outline-none focus-visible:bg-secondary/40 transition-colors">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-app-sm font-medium text-foreground">{d.rider_name ?? `Rider ${d.rider_id}`}</span>
+                      <span className="text-app-sm font-semibold text-foreground">{d.rider_name ?? `Rider ${d.rider_id}`}</span>
                       <span className="text-app-13 text-muted-foreground">{whenText(d.started_at ?? d.decided_at)}</span>
                     </div>
-                    <p className="mt-0.5 line-clamp-2 text-app-13 text-muted-foreground">{explain(d).summary}</p>
-                    <p className="mt-0.5 text-app-13 font-medium text-foreground">{STATUS_LABEL[d.status] ?? d.status}</p>
+                    <p className="mt-1 line-clamp-2 text-app-13 text-muted-foreground leading-snug">{explain(d).summary}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 text-app-13 font-medium text-amber-700 dark:text-amber-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        {STATUS_LABEL[d.status] ?? d.status}
+                      </span>
+                      {d.rider_id && (
+                        <span className="text-app-13 text-muted-foreground font-mono">{d.rider_id}</span>
+                      )}
+                    </div>
                   </Link>
                 </li>
               ))}
