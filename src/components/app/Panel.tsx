@@ -8,11 +8,12 @@ export const Panel: React.FC<{
   action?: React.ReactNode
   children: React.ReactNode
   className?: string
+  bodyClassName?: string
   flush?: boolean
-}> = ({ title, note, action, children, className, flush }) => (
+}> = ({ title, note, action, children, className, bodyClassName, flush }) => (
   <section className={cn('tj-rise rounded-xl border border-border bg-card', className)}>
     {(title || action) && (
-      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 shrink-0">
         <div className="min-w-0">
           {title && <h2 className="text-app-15 font-semibold text-foreground">{title}</h2>}
           {note && <p className="text-app-13 text-muted-foreground">{note}</p>}
@@ -20,6 +21,6 @@ export const Panel: React.FC<{
         {action}
       </div>
     )}
-    <div className={flush ? '' : 'p-4'}>{children}</div>
+    <div className={cn(flush ? '' : 'p-4', bodyClassName)}>{children}</div>
   </section>
 )
