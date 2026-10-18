@@ -62,6 +62,7 @@ def drive(rider: str, scenario: str, until_status: str, max_steps: int = 40) -> 
 def main() -> None:
     global csrf
     csrf = call("/auth/company/login", {"email": EMAIL, "password": password()})["csrf_token"]
+    call("/lab/reset", {})
     plan = [("R00002", "hard_handoff", "pending_stepup"), ("R00009", "credential_theft", "any_flag"),
             ("R00017", "timeshare_rental", "any_flag"), ("R00020", "gradual_sharing", "any_flag"),
             ("R00041", "slow_drift", "any_flag")]
