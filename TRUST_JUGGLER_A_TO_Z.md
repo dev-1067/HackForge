@@ -15,7 +15,7 @@ This file is the one place that explains the whole project: the idea, how it wor
 | Who uses it | **Operations team** (company portal) and **delivery partners** (riders) |
 | Stack | Python 3.13, FastAPI, SQLAlchemy 2, SQLite (default) or PostgreSQL; React 19, Vite 8, TypeScript, Tailwind 3, react-router 7, Recharts, Leaflet |
 | Data | 100% simulated (sixty simulated riders, about 3,000 sessions after a fresh start) |
-| Tests | 249 backend tests, 73 browser checks, type check, production build, lint (all passing at the last run) |
+| Tests | 250 backend tests, 76 browser checks, type check, production build, lint (all passing at the last run) |
 
 ---
 
@@ -246,16 +246,16 @@ python -m sim.generate --riders 100 --days 30 --out data   # raw CSV dataset
 
 | Check | Result at the last run |
 |---|---|
-| `python -m pytest -q` (engine, simulator, API, accounts, partner portal, search, live cases, notifications, database view) | 249 passed (about 7 minutes) |
+| `python -m pytest -q` (engine, simulator, API, accounts, partner portal, search, live cases, notifications, database view) | 250 passed (about 7 minutes) |
 | `python -m pyflakes api engine sim conftest.py scripts` | clean |
 | `npx tsc -b` | no errors |
 | `npm run build` | succeeds |
 | `npm run lint` | 0 errors (warnings about setting state inside effects remain) |
-| `node e2e/smoke.cjs` (real Chromium, 73 checks: both portals, every sidebar link, search and filters, lookup, live cases cleared and suspended by a person, map, notifications, work summary, security, CSV downloads, dark mode, selection colour, ripple, phone layouts, role isolation) | 73 / 73 |
+| `node e2e/smoke.cjs` (real Chromium, 76 checks: both portals, every sidebar link, search and filters, lookup, live cases cleared and suspended by a person, map, notifications, work summary, security, CSV downloads, dark mode, selection colour, ripple, phone layouts, role isolation) | 76 / 76 |
 
 Run the browser checks against a **freshly started backend** (`NODE_PATH=$(npm root -g) node e2e/smoke.cjs`); leftovers from earlier runs can trip a few steps.
 
-**Not run:** the Docker image build, and the newest tests on PostgreSQL (the schema and scoring were verified on PostgreSQL earlier; the newer tables and queries use portable SQLAlchemy only).
+**Not run:** the Docker image build. The test suite runs on SQLite; PostgreSQL 16 was exercised with a separate script covering search, filters, lookup, the map, notifications, review and expiry, and all of it passed.
 
 ---
 

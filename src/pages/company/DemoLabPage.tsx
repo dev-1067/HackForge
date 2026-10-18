@@ -7,7 +7,7 @@ import { DecisionTable } from '@/components/app/DecisionTable'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { pct } from '@/lib/plain'
+import { STATUS_LABEL, pct } from '@/lib/plain'
 import type { Decision, LabState, RiderListItem, Scenario } from '@/types/api'
 
 const STEP_OPTIONS = [3, 6, 10]
@@ -60,7 +60,8 @@ export const DemoLabPage: React.FC = () => {
 
   if (!state && !error) return <Spinner label="Loading the demo lab" />
   const sim = summary?.simulation
-  const blocked = riderId && state?.blocked.includes(riderId)
+  const riderStatus = riderId ? state?.statuses?.[riderId] : undefined
+  const statusSuffix = (id: string) => { const st = state?.statuses?.[id]; return st ? ` (${(STATUS_LABEL[st] ?? st).toLowerCase()})` : '' }
 
   return (
     <div className="space-y-4">
@@ -78,7 +79,7 @@ export const DemoLabPage: React.FC = () => {
               <label htmlFor="lab-rider" className="mb-1.5 block font-medium text-foreground">Rider</label>
               <select id="lab-rider" value={riderId} onChange={(e) => setRiderId(e.target.value)}
                 className="w-full rounded-lg border border-border bg-card px-3 py-2 text-app-sm focus:outline-none focus:ring-2 focus:ring-ring/40">
-                {riders.map((r) => <option key={r.rider_id} value={r.rider_id}>{r.name ?? `Rider ${r.rider_id}`}{state?.blocked.includes(r.rider_id) ? ' (blocked)' : ''}</option>)}
+                {riders.map((r) => <option key={r.rider_id} value={r.rider_id}>{r.name ?? `Rider ${r.rider_id}`}{statusSuffix(r.rider_id)}</option>)}
               </select>
             </div>
             <div className="text-app-sm">
@@ -95,7 +96,14 @@ export const DemoLabPage: React.FC = () => {
             </div>
           </div>
           {selected && <p className="mt-2 text-app-13 text-muted-foreground">{selected.description}</p>}
-          {blocked && <p className="mt-2 text-app-13 text-amber-700 dark:text-amber-400">This rider is blocked. Starting a new scenario unblocks them.</p>}
+          {riderStatus && riderStatus !== 'watch' && (
+            <p className="mt-2 text-app-13 text-amber-700 dark:text-amber-400">
+              This rider is currently <strong>{(STATUS_LABEL[riderStatus] ?? riderStatus).toLowerCase()}</strong>.
+              {riderStatus === 'suspended' ? ' New sessions are still scored, but the account stays suspended until a person clears it on the Needs review page.'
+                : riderStatus === 'held' ? ' Payouts stay on hold until a person decides on the Needs review page.'
+                : ' An extra check is waiting for the rider, or for a person on the Needs review page.'}
+            </p>
+          )}
 
           <label className="mt-3 flex items-start gap-2 text-app-sm">
             <input type="checkbox" checked={autoAnswer} onChange={(e) => setAutoAnswer(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#0F3B2C]" />

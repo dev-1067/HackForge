@@ -79,20 +79,24 @@ export const RiderMap: React.FC = () => {
   // create the map once
   useEffect(() => {
     if (!host.current || map.current) return
-    const m = L.map(host.current, { zoomControl: true, scrollWheelZoom: false, attributionControl: true }).setView([21.5, 79], 4)
+    const m = L.map(host.current, {
+      zoomControl: true, scrollWheelZoom: false, attributionControl: true,
+      // Leaflet finishes animated zooms with a timer; leaving the page in that moment threw an error. Plain zooms avoid it.
+      zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false, inertia: false,
+    }).setView([21.5, 79], 4)
     let errors = 0
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).on('tileerror', () => { errors += 1; if (errors > 3) setTilesFailed(true) }).addTo(m)
     layer.current = L.layerGroup().addTo(m)
     map.current = m
-    return () => { m.remove(); map.current = null; layer.current = null }
+    return () => { map.current = null; layer.current = null; m.off(); m.remove() }
   }, [])
 
   // draw the markers
   useEffect(() => {
     const m = map.current, layerGroup = layer.current
-    if (!m || !layerGroup) return
+    if (!m || !layerGroup || !m.getContainer()) return
     layerGroup.clearLayers()
     const drawRider = (r: MapRider, at: L.LatLngTuple) => {
       const color = COLORS[r.status] ?? COLORS.active
@@ -154,7 +158,7 @@ export const RiderMap: React.FC = () => {
     const key = city || 'all'
     if (points.length && fitted.current !== key) {
       fitted.current = key
-      m.fitBounds(L.latLngBounds(points).pad(0.25), { maxZoom: city ? 11 : 6, animate: false })
+      try { m.fitBounds(L.latLngBounds(points).pad(0.25), { maxZoom: city ? 11 : 6, animate: false }) } catch { /* the map was removed while drawing */ }
     }
   }, [shown, city, pulse])
 
@@ -162,7 +166,7 @@ export const RiderMap: React.FC = () => {
   useEffect(() => {
     const m = map.current
     if (!m || !host.current) return
-    const ro = new ResizeObserver(() => m.invalidateSize())
+    const ro = new ResizeObserver(() => { if (map.current === m) m.invalidateSize() })    // never touch a map that was already removed
     ro.observe(host.current)
     return () => ro.disconnect()
   }, [])

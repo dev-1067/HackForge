@@ -149,6 +149,8 @@ export interface LabState {
   waiting_for_review?: boolean
   riders: number
   blocked: string[]
+  /** Riders whose account is not simply normal, with their real status. */
+  statuses?: Record<string, string>
   generated: number
   active_scenarios: Record<string, { kind: string; scenario: string }>
 }

@@ -12,7 +12,7 @@ import threading
 import time
 from typing import Any
 
-from engine.profile import ESCALATED_STATUSES
+from engine.profile import ESCALATED_STATUSES, STATUS_ACTIVE, STATUS_SUSPENDED
 from sim.live import LiveWorld
 from sim.records import SessionRecord
 
@@ -128,7 +128,15 @@ class Lab:
                 self.generated += 1
             return results
 
+    def _sync_blocked(self) -> None:
+        """"Blocked" means the platform has really suspended the account. It follows the rider's actual status, so a
+        rider who was cleared, or who passed a check, is no longer shown as blocked."""
+        engine = self.service.engine
+        self.blocked = {rid for rid in (self.world.rider_ids if self.world else [])
+                        if (st := engine.get_state(rid)) is not None and st.status == STATUS_SUSPENDED}
+
     def _pick_rider(self, world: LiveWorld) -> str | None:
+        self._sync_blocked()
         candidates = [r for r in world.rider_ids if r not in self.blocked]
         if not self.auto_resolve:
             # riders already waiting for a person stay as they are, so cases pile up for review instead of changing underneath it
@@ -145,7 +153,6 @@ class Lab:
             if rider_id not in world.sims:
                 raise UnknownRider(rider_id)
             info = world.trigger(rider_id, scenario)
-            self.blocked.discard(rider_id)
             self.service.bus.publish("lab", {"type": "scenario", **info})
             decisions = self.step(rider_id, steps, auto_resolve) if steps else []
             return {"triggered": info, "decisions": decisions}
@@ -180,6 +187,7 @@ class Lab:
         return self._open_value
 
     def _start_incident(self, world: LiveWorld) -> None:
+        self._sync_blocked()
         riders = [r for r in world.rider_ids if r not in self.blocked and r not in self.focus
                   and not world.meta[r].scenario and not self._waiting(r)]
         attacks = [c["name"] for c in world.catalog() if c["kind"] == "attack"]
@@ -199,9 +207,7 @@ class Lab:
             self.focus.pop(rider_id, None)
             self.cooldown_until = time.monotonic() + self.COOLDOWN_SECONDS
             self._open_at = 0.0
-            if takeover_confirmed:
-                self.blocked.add(rider_id)
-            else:
+            if not takeover_confirmed:
                 sim = self.world.sims[rider_id]
                 sim.effects = [e for e in sim.effects if e.kind != "attack"]
                 meta = self.world.meta[rider_id]
@@ -211,7 +217,11 @@ class Lab:
     def state(self) -> dict[str, Any]:
         with self._lock:
             world = self._need_world()
-            return {"running": self.running, "rate": self.rate, "auto_resolve": self.auto_resolve,
+            self._sync_blocked()
+            engine = self.service.engine
+            statuses = {rid: st.status for rid in world.rider_ids
+                        if (st := engine.get_state(rid)) is not None and st.status != STATUS_ACTIVE}
+            return {"statuses": statuses, "running": self.running, "rate": self.rate, "auto_resolve": self.auto_resolve,
                     "incidents": self.incidents,
                     "waiting_for_review": bool(self.running and not self.auto_resolve and self._open_cases() >= self.MAX_OPEN_CASES),
                     "riders": len(world.sims), "blocked": sorted(self.blocked), "generated": self.generated,
