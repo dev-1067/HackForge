@@ -90,3 +90,22 @@ def test_the_queue_stays_bounded_and_the_run_waits_for_a_person(client):
     client.post(f"/decisions/{case['decision_id']}/review", json={"takeover_confirmed": False})
     assert wait_for(lambda: client.get("/lab/state").json()["generated"] > generated, seconds=10)
     client.post("/lab/run", json={"action": "stop"})
+
+
+def test_blocked_follows_the_riders_real_status(client):
+    """A rider is only shown as blocked while the account is really suspended, and a normal rider never is."""
+    client.post("/lab/scenario", json={"rider_id": "R00002", "scenario": "new_phone", "steps": 4})
+    state = client.get("/lab/state").json()
+    assert "R00002" not in state["blocked"] and "R00002" not in state["statuses"]          # an everyday change is normal
+    client.post("/lab/scenario", json={"rider_id": "R00001", "scenario": "hard_handoff", "steps": 12})
+    state = client.get("/lab/state").json()
+    assert "R00001" in state["blocked"] and state["statuses"]["R00001"] == "suspended"
+    # a person clears the account: it is no longer blocked and no longer listed as flagged
+    decision = client.get("/decisions?q=R00001&limit=1").json()[0]
+    assert client.post(f"/decisions/{decision['decision_id']}/review", json={"takeover_confirmed": False}).status_code == 200
+    state = client.get("/lab/state").json()
+    assert "R00001" not in state["blocked"] and "R00001" not in state["statuses"]
+    # starting an everyday change for a suspended rider does not pretend to unblock them
+    client.post("/lab/scenario", json={"rider_id": "R00003", "scenario": "hard_handoff", "steps": 12})
+    client.post("/lab/scenario", json={"rider_id": "R00003", "scenario": "os_update", "steps": 2})
+    assert client.get("/lab/state").json()["statuses"].get("R00003") in ("suspended", "held", "pending_stepup")

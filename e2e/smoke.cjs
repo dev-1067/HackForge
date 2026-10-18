@@ -426,6 +426,8 @@ async function noHorizontalScroll(page) {
     await first.getByRole('button', { name: 'Clear account' }).click()
     await first.getByRole('button', { name: 'Yes' }).click()
     await ops.getByText(/account was cleared/).waitFor()
+    // wait for the list to refresh so the next card is not re-ordered under the click
+    await ops.waitForFunction((n) => document.querySelectorAll('input[placeholder="Add a note (optional)"]').length < n, before, { timeout: 15000 })
     // suspend another
     const next = ops.locator('li').filter({ has: ops.getByPlaceholder('Add a note (optional)') }).first()
     await next.getByRole('button', { name: 'Suspend account' }).click()
@@ -487,6 +489,7 @@ async function noHorizontalScroll(page) {
         return null
       })
       expect(spot !== null, 'no marker is visible on the map')
+      await ops.mouse.move(spot.x, spot.y)
       await ops.mouse.click(spot.x, spot.y)
     }
     // zoomed out: one marker per city; clicking one zooms in on that city
@@ -504,13 +507,44 @@ async function noHorizontalScroll(page) {
     await ops.getByRole('group', { name: 'Show riders' }).getByRole('button', { name: 'All riders' }).click()
     await ops.waitForTimeout(500)
     // a rider marker opens a popup with a working link
-    await clickMarker()
-    await ops.getByRole('link', { name: 'Open rider' }).waitFor()
+    for (let attempt = 0; attempt < 4 && !(await ops.getByRole('link', { name: 'Open rider' }).count()); attempt++) {
+      await clickMarker()
+      await ops.waitForTimeout(500)
+    }
+    await ops.getByRole('link', { name: 'Open rider' }).waitFor({ timeout: 5000 })
     await ops.getByRole('link', { name: 'Open rider' }).click()
     await ops.waitForURL(/\/riders\/R/)
     await go('/dashboard')
     await ops.getByRole('region', { name: 'Map of riders' }).waitFor()
     await noHorizontalScroll(ops)
+  })
+
+  await step('leaving the dashboard right after zooming the map causes no page error', async () => {
+    await go('/dashboard')
+    await ops.getByRole('region', { name: 'Map of riders' }).waitFor()
+    await ops.locator('.leaflet-control-zoom-in').click({ force: true })
+    await ops.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /Riders/ }).click()
+    await ops.waitForURL(/\/riders$/)
+    await ops.waitForTimeout(600)
+  })
+  await step('demo lab: rider list shows real statuses, not a stale "blocked" flag', async () => {
+    await go('/simulation')
+    await ops.waitForFunction(() => document.querySelectorAll('#lab-rider option').length > 10, null, { timeout: 15000 })
+    await ops.waitForTimeout(500)
+    const labels = await ops.locator('#lab-rider option').allInnerTexts()
+    expect(!labels.some((l) => /blocked/i.test(l)), 'the old "blocked" label is still shown')
+    const flagged = labels.filter((l) => /\((suspended|on hold|extra check pending|watching)\)/i.test(l))
+    // every flagged label must match a rider whose real status is not normal
+    const real = await ops.evaluate(async () => (await (await fetch('/api/lab/state', { credentials: 'include' })).json()).statuses)
+    expect(flagged.length === Object.keys(real).length, `labels (${flagged.length}) do not match real statuses (${Object.keys(real).length})`)
+  })
+  await step('demo lab: an everyday change for a normal rider shows no warning', async () => {
+    const all = await ops.locator('#lab-rider option').allInnerTexts()
+    const normal = await ops.evaluate(() => [...document.querySelectorAll('#lab-rider option')].find((o) => !/\(/.test(o.textContent)).value)
+    await ops.getByLabel('Rider', { exact: true }).selectOption(normal)
+    await ops.getByLabel('What happens').selectOption('os_update')
+    expect(await ops.getByText(/This rider is currently/).count() === 0, 'a normal rider shows a status warning')
+    expect(all.length > 10, 'rider list is empty')
   })
 
   console.log('Database (API only: inspection is done with DB Browser for SQLite)')

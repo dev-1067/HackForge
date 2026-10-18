@@ -72,7 +72,7 @@ It does not wait forever. After a configurable time (default 60 minutes) the che
 We look at how the app is used (timing, rhythm, speed), not continuous location or identity documents. Phone numbers are masked, riders can download all their data, the database view hides secrets and masks contact details, and a rider can only ever read their own records (the rider id comes from the session, never the request). Riders are told that a new phone or city is normal.
 
 ### 16. How did you test it?
-249 automated backend tests (engine, simulator, API, accounts, search, live cases, notifications), plus a real-browser run of 73 checks that clicks through both portals: sign-in, search and filters, session lookup, clearing and suspending cases, the map, notifications, downloads, dark mode, phone layouts and role isolation. The type check, production build and lint are clean. Not run: the Docker image build and the newest tests on PostgreSQL.
+250 automated backend tests (engine, simulator, API, accounts, search, live cases, notifications), plus a real-browser run of 76 checks that clicks through both portals: sign-in, search and filters, session lookup, clearing and suspending cases, the map, notifications, downloads, dark mode, phone layouts and role isolation. The type check, production build and lint are clean. The suite runs on SQLite; PostgreSQL 16 was checked separately with a script. Not run: the Docker image build.
 
 ### 17. How is the app secured?
 Passwords use scrypt with a random salt; sessions use an HttpOnly, SameSite cookie and only a digest of the token is stored; every change needs a CSRF token; five failed sign-ins lock an account for 15 minutes; company sign-up needs an invite code; the two roles are strictly separated (a rider gets 403 on every company endpoint). Not built: password reset by e-mail (no mail service).
@@ -102,7 +102,7 @@ Yes, and it is the reason for several design choices: every rider is compared **
 - Map positions are derived from city and area code, not GPS.
 - No e-mail or SMS, no password reset by e-mail, no payouts or earnings (we refused to invent them).
 - Honest riders can still be flagged by chance (about 1% of sessions in our live simulation).
-- Single-process prototype (see question 20); Docker build and PostgreSQL for the newest tables untested.
+- Single-process prototype (see question 20); Docker image build untested.
 - Search is basic partial matching.
 
 ### 23. What would you build next (future scope)?
