@@ -42,8 +42,8 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     async def lifespan(app: FastAPI):
         svc.bus.attach_loop(asyncio.get_running_loop())
         svc.startup()
-        if settings.lab_enabled and settings.reset_on_start:
-            await asyncio.to_thread(lab.build)
+        if settings.lab_enabled:
+            await asyncio.to_thread(lab.build, settings.reset_on_start)
         await asyncio.to_thread(seed_demo_accounts, auth, settings)
 
         async def sweep():

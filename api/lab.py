@@ -48,7 +48,7 @@ class Lab:
         self._task: asyncio.Task | None = None
 
     # ------------------------------------------------------------------ setup
-    def build(self) -> None:
+    def build(self, ingest_history: bool = True) -> None:
         """Create the world and score each rider's history so every baseline is warm."""
         s = self.settings
         with self._lock:
@@ -57,9 +57,10 @@ class Lab:
             self.focus.clear()
             self.generated = 0
             self.world = LiveWorld(s.lab_riders, s.lab_seed, s.lab_history_days)
-            for rider_id in self.world.rider_ids:
-                for rec in self.world.history[rider_id]:
-                    self._ingest(rec, source="seed", auto_resolve=True, publish=False)
+            if ingest_history:
+                for rider_id in self.world.rider_ids:
+                    for rec in self.world.history[rider_id]:
+                        self._ingest(rec, source="seed", auto_resolve=True, publish=False)
 
     def reset(self) -> None:
         self.stop()
