@@ -40,19 +40,27 @@ export const RiderLogin: React.FC = () => {
         <Field label="Password" type="password" autoComplete="current-password" value={password}
           onChange={(v) => { setPassword(v); clearError('password') }} error={errors.password} />
         <Button type="submit" loading={busy} className="w-full">{busy ? 'Signing in' : 'Sign in'}</Button>
-        <div className="pt-1 text-center">
-          <button
-            type="button"
-            onClick={() => {
-              setPhone('9000000001')
-              setPassword('demo-pass-123')
-              clearError('phone')
-              clearError('password')
-            }}
-            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-          >
-            Fill demo credentials (9000000001)
-          </button>
+        <div className="pt-2 text-center">
+          <div className="flex items-center justify-center gap-2">
+            {[1, 2, 3].map((num) => {
+              const p = `900000${String(num).padStart(4, '0')}`
+              return (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => {
+                    setPhone(p)
+                    setPassword('demo-pass-123')
+                    clearError('phone')
+                    clearError('password')
+                  }}
+                  className="rounded-md border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  Rider {num}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </form>
     </AuthShell>
