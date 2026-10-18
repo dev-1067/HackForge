@@ -95,10 +95,6 @@ function reasonSentence(reason: Reason): string | null {
   }
   if (note.startsWith('payouts held')) return 'Payouts are held until someone reviews the account'
   if (note.startsWith('account suspended')) return 'Account is suspended until someone reviews it'
-  if (note.startsWith('evidence ')) return null
-
-  // Retain descriptive narrative notes
-  if (note && note.length > 5) return note
   return null
 }
 
@@ -115,21 +111,9 @@ export function explain(d: Pick<Decision, 'level' | 'context_flags' | 'reasons'>
       summary = 'Small changes in activity. Keeping a quiet eye on it.'
       break
     case 'L2':
-      if (d.context_flags.includes('shared_device')) {
-        summary = 'Phone hardware is linked to multiple rider accounts. Rapid account switching detected.'
-      } else if (d.context_flags.includes('new_network_provider') && d.context_flags.includes('new_city')) {
-        summary = 'Saw an unfamiliar datacenter proxy connection and rapid transit across city zones.'
-      } else if (d.context_flags.includes('new_network_provider')) {
-        summary = 'Saw a new connection provider, and activity has also changed. Asked the rider to confirm.'
-      } else if (d.context_flags.includes('new_zone')) {
-        summary = 'Operating in an unfamiliar delivery sector with motion and order handling diverging from baseline.'
-      } else if (d.context_flags.includes('new_device') && d.context_flags.includes('new_os')) {
-        summary = 'First session recorded on a newly seen phone model with prolonged pauses between orders.'
-      } else if (flags) {
-        summary = `Saw ${flags}, and activity has also changed. Asked the rider to confirm it is them.`
-      } else {
-        summary = 'Same phone and area, but activity has changed over several sessions. Asked the rider to confirm it is them.'
-      }
+      summary = flags
+        ? `Saw ${flags}, and activity has also changed. Asked the rider to confirm it is them.`
+        : 'Same phone and area, but activity has changed over several sessions. Asked the rider to confirm it is them.'
       break
     default:
       summary = 'Activity has stayed different from this rider’s usual pattern. Someone should take a closer look.'

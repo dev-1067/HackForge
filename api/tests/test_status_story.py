@@ -93,3 +93,22 @@ def test_the_map_follows_a_rider_who_moves_city(client):
     client.post("/lab/scenario", json={"rider_id": "R00002", "scenario": "moved_city", "steps": 4})
     after = {r["rider_id"]: r for r in client.get("/map/riders").json()}["R00002"]
     assert after["city"] != before["city"] and after["last_seen_at"] > before["last_seen_at"]
+
+
+def test_demo_accounts_match_the_simulated_riders_exactly(client):
+    """Every demo account belongs to a simulated rider and every simulated rider has one (no phantom riders)."""
+    from api.seed import DEMO_RIDERS
+    riders = {r["rider_id"] for r in client.get("/riders?limit=500").json()}
+    lab = client.app.state.lab
+    assert riders == set(lab.world.rider_ids)                       # nobody extra, nobody missing
+    accounts = {rid for _, _, rid in DEMO_RIDERS if int(rid[1:]) < client.app.state.settings.lab_riders}
+    assert accounts == riders
+    assert {rid for _, _, rid in DEMO_RIDERS} == {f"R{i:05d}" for i in range(60)}      # R00000 to R00059, once each
+    assert len({phone for _, phone, _ in DEMO_RIDERS}) == 60
+
+
+def test_reseeding_refreshes_demo_names_but_never_other_accounts(client):
+    auth = client.app.state.auth
+    auth.provision_rider_user("Old Name", "9111111111", "demo-pass-123", "R90004")
+    assert auth.provision_rider_user("New Name", "9111111111", "demo-pass-123", "R90004").name == "Old Name"
+    assert auth.provision_rider_user("New Name", "9111111111", "demo-pass-123", "R90004", refresh_name=True).name == "New Name"

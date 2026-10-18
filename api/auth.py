@@ -305,7 +305,7 @@ class AuthService:
             db.add(user)
             return self._commit_user(db, user, "That email is already registered.")
 
-    def provision_rider_user(self, name: str, phone: str, password: str, rider_id: str) -> UserRow:
+    def provision_rider_user(self, name: str, phone: str, password: str, rider_id: str, *, refresh_name: bool = False) -> UserRow:
         errors: dict[str, str] = {}
         name = validate_name(name, errors)
         phone = normalise_phone(phone)
@@ -317,6 +317,9 @@ class AuthService:
         with self.db.session() as db:
             existing = db.scalar(select(UserRow).where(UserRow.phone == phone))
             if existing is not None:
+                if refresh_name and existing.name != name:      # demo accounts keep their current display name
+                    existing.name = name
+                    db.commit()
                 return existing
             if db.get(RiderRow, rider_id) is None:
                 db.add(RiderRow(rider_id=rider_id, archetype="unknown", status="active", created_at=utcnow()))

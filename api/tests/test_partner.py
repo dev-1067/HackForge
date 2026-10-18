@@ -75,7 +75,7 @@ def test_a_brand_new_rider_has_only_real_events(anon):
 # ------------------------------------------------------------------ account & verification
 def test_account_page_has_only_the_riders_own_plain_information(rider_client):
     account = rider_client.get("/me/rider/account").json()
-    assert account["profile"]["name"] == "Demo Rider One" and account["profile"]["phone_hint"].startswith("••••")
+    assert account["profile"]["name"] == "Demo Rider 1" and account["profile"]["phone_hint"].startswith("••••")
     assert "9000000001" not in json.dumps(account)
     assert account["status"]["state"] == "ok" and account["verification"]["outstanding"] is None
     assert account["devices"] and account["devices"][0]["origin"] == "demo" and account["devices"][0]["current"]
@@ -158,7 +158,7 @@ def test_request_goes_to_the_team_and_the_reply_comes_back(rider_client, client)
     created = rider_client.post("/me/rider/requests", json={"kind": "legitimate_change", "message": GOOD}).json()
     assert created["status"] == "open" and created["status_label"] == "Received" and created["kind_label"]
     team = client.get("/review-requests?status=active").json()
-    assert team[0]["id"] == created["id"] and team[0]["rider_name"] == "Demo Rider One" and team[0]["rider_status"] == "active"
+    assert team[0]["id"] == created["id"] and team[0]["rider_name"] == "Demo Rider 1" and team[0]["rider_status"] == "active"
 
     assert client.post(f"/review-requests/{created['id']}/respond", json={"action": "start_review"}).status_code == 200
     assert rider_client.get("/me/rider/requests").json()[0]["status_label"] == "Being reviewed"
@@ -256,7 +256,7 @@ def test_export_has_the_riders_own_data_and_no_secrets(rider_client):
     response = rider_client.get("/me/rider/export")
     assert response.status_code == 200 and "attachment" in response.headers["content-disposition"]
     data = response.json()
-    assert data["profile"]["name"] == "Demo Rider One" and data["requests"] and data["sign_ins"] and data["devices"]
+    assert data["profile"]["name"] == "Demo Rider 1" and data["requests"] and data["sign_ins"] and data["devices"]
     dump = json.dumps(data).lower()
     for secret in ("password", "scrypt", "csrf", "token_hash", "evidence", "threshold"):
         assert secret not in dump

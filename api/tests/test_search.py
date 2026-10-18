@@ -17,8 +17,8 @@ def day(offset_days=0):
 def test_rider_search_by_id_name_and_phone_with_partial_matches(client):
     assert ids(client.get("/riders?q=R00001").json()) == ["R00001"]
     assert ids(client.get("/riders?q=r0000").json())            # partial, case-insensitive
-    assert ids(client.get("/riders?q=rider%20two").json()) == ["R00002"]
-    assert set(ids(client.get("/riders?q=Demo%20Rider").json())) == {"R00001", "R00002", "R00003"}
+    assert ids(client.get("/riders?q=rider%202").json()) == ["R00002"]
+    assert {"R00001", "R00002", "R00003"} <= set(ids(client.get("/riders?q=Demo%20Rider").json()))
     assert ids(client.get("/riders?q=9000000003").json()) == ["R00003"]
     assert ids(client.get("/riders?q=0003").json()) == ["R00003"]       # last digits of the phone
     assert client.get("/riders?q=zzzz-nobody").json() == []
@@ -63,7 +63,7 @@ def test_review_queue_filters_work_together(client):
     assert pending and all(d["level"] in ("L2", "L3", "L4") and d["review_verdict"] is None for d in pending)
     by_rider = client.get("/decisions?case_status=pending&q=R00001&limit=500").json()
     assert by_rider and set(ids(by_rider)) == {"R00001"}
-    by_name = client.get("/decisions?case_status=pending&q=demo%20rider%20one&limit=500").json()
+    by_name = client.get("/decisions?case_status=pending&q=demo%20rider%201&limit=500").json()
     assert set(ids(by_name)) == {"R00001"}
     severe = client.get("/decisions?case_status=pending&level=L2&limit=500").json()
     assert all(d["level"] == "L2" for d in severe)

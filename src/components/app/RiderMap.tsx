@@ -94,6 +94,27 @@ export const RiderMap: React.FC = () => {
     const m = map.current, layerGroup = layer.current
     if (!m || !layerGroup) return
     layerGroup.clearLayers()
+    const drawRider = (r: MapRider, at: L.LatLngTuple) => {
+      const color = COLORS[r.status] ?? COLORS.active
+      const marker = L.circleMarker(at, {
+        radius: ATTENTION.has(r.status) ? 9 : 6, color: '#ffffff', weight: 2, fillColor: color, fillOpacity: 0.95,
+        className: ATTENTION.has(r.status) ? 'tj-map-alert' : undefined,
+      })
+      const box = document.createElement('div')
+      const title = document.createElement('strong'); title.textContent = r.name ?? `Rider ${r.rider_id}`
+      const meta = document.createElement('div'); meta.textContent = `${STATUS_LABEL[r.status] ?? r.status} · ${[r.city, r.zone].filter(Boolean).join(' · ')}`
+      const seen = document.createElement('div'); seen.textContent = `Last session ${whenText(r.last_seen_at)}`
+      const link = document.createElement('a'); link.href = `/riders/${encodeURIComponent(r.rider_id)}`; link.textContent = 'Open rider'
+      link.style.fontWeight = '600'; link.style.textDecoration = 'underline'
+      link.addEventListener('click', (e) => { e.preventDefault(); go.current(`/riders/${encodeURIComponent(r.rider_id)}`) })
+      box.append(title, meta, seen, link)
+      marker.bindPopup(box)
+      marker.bindTooltip(`${r.name ?? r.rider_id} · ${STATUS_LABEL[r.status] ?? r.status}`, { direction: 'top' })
+      marker.addTo(layerGroup)
+      if (pulse.includes(r.rider_id)) {
+        L.circleMarker(at, { radius: 16, color, weight: 2, fill: false, className: 'tj-map-pulse', interactive: false }).addTo(layerGroup)
+      }
+    }
     const points: L.LatLngTuple[] = []
     if (!city) {
       // Zoomed out: one marker per city with the number of riders. Click it to look at that city.
@@ -102,6 +123,11 @@ export const RiderMap: React.FC = () => {
       for (const [name, members] of byCity) {
         const at = CITY_CENTERS[name]
         points.push(at)
+        if (members.length === 1) {
+          // one rider: show the rider (name, status, link), not a count of one
+          drawRider(members[0], placeOf(members[0].city, members[0].zone, members[0].rider_id) ?? at)
+          continue
+        }
         const worst = ['suspended', 'held', 'pending_stepup', 'watch', 'active'].find((st) => members.some((g) => g.status === st)) ?? 'active'
         const flagged = members.filter((g) => ATTENTION.has(g.status)).length
         const marker = L.circleMarker(at, {
@@ -122,25 +148,7 @@ export const RiderMap: React.FC = () => {
         const at = placeOf(r.city, r.zone, r.rider_id)
         if (!at) continue
         points.push(at)
-        const color = COLORS[r.status] ?? COLORS.active
-        const marker = L.circleMarker(at, {
-          radius: ATTENTION.has(r.status) ? 9 : 6, color: '#ffffff', weight: 2, fillColor: color, fillOpacity: 0.95,
-          className: ATTENTION.has(r.status) ? 'tj-map-alert' : undefined,
-        })
-        const box = document.createElement('div')
-        const title = document.createElement('strong'); title.textContent = r.name ?? `Rider ${r.rider_id}`
-        const meta = document.createElement('div'); meta.textContent = `${STATUS_LABEL[r.status] ?? r.status} · ${[r.city, r.zone].filter(Boolean).join(' · ')}`
-        const seen = document.createElement('div'); seen.textContent = `Last session ${whenText(r.last_seen_at)}`
-        const link = document.createElement('a'); link.href = `/riders/${encodeURIComponent(r.rider_id)}`; link.textContent = 'Open rider'
-        link.style.fontWeight = '600'; link.style.textDecoration = 'underline'
-        link.addEventListener('click', (e) => { e.preventDefault(); go.current(`/riders/${encodeURIComponent(r.rider_id)}`) })
-        box.append(title, meta, seen, link)
-        marker.bindPopup(box)
-        marker.bindTooltip(r.name ?? r.rider_id, { direction: 'top' })
-        marker.addTo(layerGroup)
-        if (pulse.includes(r.rider_id)) {
-          L.circleMarker(at, { radius: 16, color, weight: 2, fill: false, className: 'tj-map-pulse', interactive: false }).addTo(layerGroup)
-        }
+        drawRider(r, at)
       }
     }
     const key = city || 'all'
@@ -183,6 +191,12 @@ export const RiderMap: React.FC = () => {
         </div>
       }
     >
+      {only === 'attention' && (
+        <p className="mb-2 flex flex-wrap items-center gap-x-2 rounded-lg bg-amber-500/10 px-3 py-1.5 text-app-13 text-foreground">
+          Showing only riders that need attention: {shown.length} of {total}.
+          <button type="button" onClick={() => setOnly('all')} className="font-medium underline underline-offset-2">Show all riders</button>
+        </p>
+      )}
       <div className="relative">
         <div ref={host} className="tj-map h-[340px] w-full overflow-hidden rounded-lg border border-border bg-secondary" role="region" aria-label="Map of riders" />
         {shown.length === 0 && !error && (
