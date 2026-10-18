@@ -5,9 +5,10 @@ from .auth import AuthService
 from .settings import Settings
 
 DEMO_COMPANY_EMAIL = "ops@trustjuggler.demo"
-DEMO_RIDERS = (("Demo Rider One", "9000000001", "R00001"),
-               ("Demo Rider Two", "9000000002", "R00002"),
-               ("Demo Rider Three", "9000000003", "R00003"))
+DEMO_RIDERS = tuple(
+    (f"Demo Rider {i}", f"900000{i:04d}", f"R{i:05d}")
+    for i in range(1, 61)
+)
 
 
 def seed_demo_accounts(auth: AuthService, settings: Settings) -> list[str]:
