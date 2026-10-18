@@ -104,11 +104,23 @@ Sidebar is now Recent Activity, **Notifications**, **Work Summary**, Account & V
   rider's own time zone), cities, phones used. No scores or reasons. Demo activity is labelled. It does not influence the account.
 - **Security** (`GET /me/sign-ins`, plus the existing password and sessions endpoints): sign-in history, where you are signed in, sign out other sessions,
   change password, and a warning when a new browser signed in. These panels moved here for riders; company Settings still has them.
-- **Database** page for operations (`GET /db/overview`, `GET /db/tables/{name}`): connection, every table with columns, keys, row counts, browse, search, paging.
+- **Database** read-only API for operations (`GET /db/overview`, `GET /db/tables/{name}`): connection, every table with columns, keys, row counts, browse, search, paging. (The in-app Database page was removed by the team in favour of DB Browser for SQLite; the API remains.)
   Read-only (no write routes exist; a test checks the API surface). Secrets are never returned (password hashes, session and CSRF tokens, login-attempt
   keys); phone numbers and e-mails are masked; only the application's own tables can be read. A test scans every table for hashes, passwords and phone numbers.
   The new table `notification_reads` is created automatically; no existing table changed.
 - Not built on purpose: earnings or payouts (there is no such data, and it would be invented), and SMS or e-mail alerts (no sending service).
+
+## 3e. Fixes after the team's merge (demo data, wording, map)
+
+- **Off-by-one in demo accounts:** the simulated riders are R00000 to R00059, but 60 accounts were created for R00001 to R00060. R00060 was a phantom rider with no sessions
+  (it showed up in the rider list) and R00000 had no account. Now one account per simulated rider (R00001 to R00059, then R00000), and none for riders the lab does not have.
+  Re-seeding also refreshes the demo display names ("Demo Rider 1", not "Demo Rider One") on databases created earlier.
+- **Invented explanations removed:** the review wording had been changed to claim things the engine never measures ("datacenter proxy", "impossible transit speed", "new phone model",
+  "rapid account switching"). The wording again describes only what was actually detected (a new phone, a new city, a shared phone, a changed pattern), and raw internal notes are no longer shown.
+- **Hand-edited database rows removed:** `scripts/setup_demo_states.py` used to rewrite decisions and their reasons directly in SQLite with made-up text. It now drives the simulation lab through the normal
+  API (`python scripts/setup_demo_states.py` while the backend runs), so every decision and reason is real engine output.
+- **Docs:** the rider table in `DATABASE_AND_CREDENTIALS.md` was a repeating pattern that did not match the data. It is regenerated from the simulator, and the wrong column names were corrected.
+- **Map:** a city with one rider now shows that rider (name, status, link) instead of a circle with the number 1, and filtering to "Needs attention" shows a notice with a "Show all riders" button.
 
 ## 4. API additions (all company-only, backward compatible)
 
@@ -148,7 +160,7 @@ Run on SQLite (the default), Python 3.13, Node 22, Chromium via Playwright:
 
 | Check | Result |
 |---|---|
-| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 247 passed |
+| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 249 passed |
 | `python -m pyflakes api engine sim conftest.py` | clean |
 | `npx tsc -b` | no errors |
 | `npm run build` | succeeds |
