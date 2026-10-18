@@ -13,7 +13,7 @@ import type { Decision, LabState, RiderListItem, Scenario } from '@/types/api'
 const STEP_OPTIONS = [3, 6, 10]
 
 export const DemoLabPage: React.FC = () => {
-  const { summary, refresh } = useOps()
+  const { summary, refresh, changeTick } = useOps()
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [riders, setRiders] = useState<RiderListItem[]>([])
   const [state, setState] = useState<LabState | null>(null)
@@ -21,6 +21,7 @@ export const DemoLabPage: React.FC = () => {
   const [scenario, setScenario] = useState('')
   const [steps, setSteps] = useState(6)
   const [autoAnswer, setAutoAnswer] = useState(true)
+  const [restoreFirst, setRestoreFirst] = useState(true)
   const [results, setResults] = useState<Decision[]>([])
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
@@ -41,6 +42,8 @@ export const DemoLabPage: React.FC = () => {
     }
   }, [])
   useEffect(() => { void load() }, [load])
+  // keep the rider statuses current when something changes elsewhere (a review, an extra check, live activity)
+  useEffect(() => { if (changeTick > 0) lab.state().then(setState).catch(() => undefined) }, [changeTick])
 
   const selected = useMemo(() => scenarios.find((s) => s.name === scenario), [scenarios, scenario])
 
@@ -97,12 +100,22 @@ export const DemoLabPage: React.FC = () => {
           </div>
           {selected && <p className="mt-2 text-app-13 text-muted-foreground">{selected.description}</p>}
           {riderStatus && riderStatus !== 'watch' && (
-            <p className="mt-2 text-app-13 text-amber-700 dark:text-amber-400">
-              This rider is currently <strong>{(STATUS_LABEL[riderStatus] ?? riderStatus).toLowerCase()}</strong>.
-              {riderStatus === 'suspended' ? ' New sessions are still scored, but the account stays suspended until a person clears it on the Needs review page.'
-                : riderStatus === 'held' ? ' Payouts stay on hold until a person decides on the Needs review page.'
-                : ' An extra check is waiting for the rider, or for a person on the Needs review page.'}
-            </p>
+            <div className="mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-app-13 text-foreground">
+              <p>
+                This rider is currently <strong>{(STATUS_LABEL[riderStatus] ?? riderStatus).toLowerCase()}</strong>.
+                {riderStatus === 'suspended' ? ' Until a person clears the account, new sessions are still scored but the account stays suspended.'
+                  : riderStatus === 'held' ? ' Payouts stay on hold until a person decides.'
+                  : ' An extra check is waiting for the rider or for a person.'}
+              </p>
+              <label className="mt-1.5 flex items-start gap-2">
+                <input type="checkbox" checked={restoreFirst} onChange={(e) => setRestoreFirst(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#0F3B2C]" />
+                <span>Restore the account to normal first, so the scenario starts clean. This is recorded in History as a demo lab action.</span>
+              </label>
+              <Button variant="secondary" size="sm" className="mt-2" loading={busy === 'restore'}
+                onClick={() => void run('restore', () => lab.restore(riderId), (r) => `The account was restored (it was ${(STATUS_LABEL[r.from] ?? r.from).toLowerCase()}).`)}>
+                Restore this account now
+              </Button>
+            </div>
           )}
 
           <label className="mt-3 flex items-start gap-2 text-app-sm">
@@ -123,7 +136,7 @@ export const DemoLabPage: React.FC = () => {
               sessions
             </label>
             <Button loading={busy === 'trigger'} disabled={!riderId || !scenario}
-              onClick={() => void run('trigger', () => lab.trigger(riderId, scenario, steps, autoAnswer), (r) => { setResults(r.decisions); return `${r.triggered.title}: ${r.decisions.length} sessions scored.` })}>
+              onClick={() => void run('trigger', () => lab.trigger(riderId, scenario, steps, autoAnswer, restoreFirst && !!riderStatus && riderStatus !== 'watch'), (r) => { setResults(r.decisions); return `${r.restored ? 'Account restored first. ' : ''}${r.triggered.title}: ${r.decisions.length} sessions scored.` })}>
               Run scenario
             </Button>
             <Button variant="secondary" loading={busy === 'step'} disabled={!riderId}

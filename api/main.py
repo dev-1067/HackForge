@@ -379,9 +379,14 @@ def create_app(settings: Settings | None = None, service: TrustService | None = 
     def lab_scenario(body: LabScenarioIn) -> dict[str, Any]:
         """Trigger a life event or an attack for a rider; optionally score the next ``steps`` sessions now."""
         try:
-            return lab.trigger(body.rider_id, body.scenario, body.steps, body.auto_resolve)
+            return lab.trigger(body.rider_id, body.scenario, body.steps, body.auto_resolve, body.restore)
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from None
+
+    @ops.post("/lab/restore/{rider_id}", tags=["lab"])
+    def lab_restore(rider_id: str) -> dict[str, Any]:
+        """Put a simulated rider's account back to normal so a scenario can start from a clean account."""
+        return lab.restore(rider_id)
 
     @ops.post("/lab/step", tags=["lab"])
     def lab_step(body: LabStepIn) -> list[dict[str, Any]]:

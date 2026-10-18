@@ -127,6 +127,9 @@ Sidebar is now Recent Activity, **Notifications**, **Work Summary**, Account & V
 - **Demo lab "(blocked)" on normal riders:** the lab kept its own "blocked" list, which was only added to and never cleaned, so cleared riders (and riders who passed a check) still showed
   "(blocked)", and a warning claimed that starting a scenario "unblocks" a rider although the account stayed suspended. "Blocked" now follows the engine's real status (suspended only),
   `GET /lab/state` also returns `statuses` (every rider whose status is not normal), the rider list shows the real status, e.g. "Demo Rider 12 (suspended)", and the message says what is true.
+- **Starting a scenario for a suspended / on-hold rider:** the lab used to leave the rider suspended, so choosing another scenario seemed to do nothing. Now the Demo lab offers **Restore this account now** and a
+  "Restore the account to normal first" option (on by default for a flagged rider). Restoring closes open cases and a pending extra check, ends any staged attack, keeps the rider's learned pattern and is written
+  to History as `account_restored` by "Demo lab" (`POST /lab/restore/{rider_id}`, or `restore: true` on `POST /lab/scenario`). Rider statuses on the page also refresh when something changes elsewhere.
 - **Map error when leaving the dashboard mid-zoom:** Leaflet finished animated zooms with a timer that fired after the map was removed (`_leaflet_pos` page error, found by a click-everything sweep
   on a phone-sized screen and reproduced before fixing). Zoom animations are off, the map is detached cleanly and late resize events are ignored.
 - **Verified on PostgreSQL 16** (temporary local cluster): rider search by name and phone, wildcards, case filters, city, area and phone filters, date filters, session lookup, map, history search,
@@ -171,12 +174,12 @@ Run on SQLite (the default), Python 3.13, Node 22, Chromium via Playwright:
 
 | Check | Result |
 |---|---|
-| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 250 passed |
+| `python -m pytest -q` (whole suite, incl. new search/filter/lookup and live-case tests) | 253 passed |
 | `python -m pyflakes api engine sim conftest.py` | clean |
 | `npx tsc -b` | no errors |
 | `npm run build` | succeeds |
 | `npm run lint` | 0 errors (warnings about state set in effects remain, as in the existing pages) |
-| `node e2e/smoke.cjs` against a freshly started backend (real Chromium; 76 checks, now including live background cases cleared and suspended by a person, CSV downloads and the fairness panel: sign-in, dashboard, lab, search, filters, lookup, partner portal, dark mode, selection colour, landing text size, ripple, phone layouts, role isolation) | 76/76 passed |
+| `node e2e/smoke.cjs` against a freshly started backend (real Chromium; 77 checks, now including live background cases cleared and suspended by a person, CSV downloads and the fairness panel: sign-in, dashboard, lab, search, filters, lookup, partner portal, dark mode, selection colour, landing text size, ripple, phone layouts, role isolation) | 77/77 passed |
 | Landing page on a 390 px phone | no sideways scroll (was 15 px before this work) |
 
 Not run: Docker build (no Docker daemon here). The pytest suite itself runs on SQLite; PostgreSQL was exercised with a separate script (see 3f).

@@ -109,3 +109,37 @@ def test_blocked_follows_the_riders_real_status(client):
     client.post("/lab/scenario", json={"rider_id": "R00003", "scenario": "hard_handoff", "steps": 12})
     client.post("/lab/scenario", json={"rider_id": "R00003", "scenario": "os_update", "steps": 2})
     assert client.get("/lab/state").json()["statuses"].get("R00003") in ("suspended", "held", "pending_stepup")
+
+
+def test_restoring_a_suspended_rider_gives_a_clean_account_and_is_recorded(client, rider_client):
+    client.post("/lab/scenario", json={"rider_id": "R00001", "scenario": "hard_handoff", "steps": 12})
+    assert client.get("/lab/state").json()["statuses"]["R00001"] == "suspended"
+    assert rider_client.get("/me/rider").json()["account"]["state"] == "suspended"
+    out = client.post("/lab/restore/R00001").json()
+    assert out["from"] == "suspended" and out["status"] == "active"
+    state = client.get("/lab/state").json()
+    assert "R00001" not in state["blocked"] and "R00001" not in state["statuses"] and "R00001" not in state["active_scenarios"]
+    assert rider_client.get("/me/rider").json()["account"]["state"] == "ok"
+    entry = next(a for a in client.get("/riders/R00001/audit").json() if a["action"] == "account_restored")
+    assert entry["actor"] == "lab" and entry["details"]["from"] == "suspended"
+    assert client.get("/riders/R00001").json()["status"] == "active"
+    assert not client.get("/decisions?case_status=pending&q=R00001").json()          # nothing left open
+    assert client.post("/lab/restore/NOPE").status_code == 404
+
+
+def test_a_scenario_can_start_from_a_restored_account(client):
+    client.post("/lab/scenario", json={"rider_id": "R00002", "scenario": "hard_handoff", "steps": 12})
+    assert client.get("/lab/state").json()["statuses"]["R00002"] == "suspended"
+    out = client.post("/lab/scenario", json={"rider_id": "R00002", "scenario": "new_phone", "steps": 3, "restore": True}).json()
+    assert out["restored"]["from"] == "suspended"
+    assert [d["status"] for d in out["decisions"]][0] in ("active", "watch")             # started clean
+    assert client.get("/lab/state").json()["statuses"].get("R00002") in (None, "watch")
+    # without restore a suspended rider stays suspended, as the screen says
+    client.post("/lab/scenario", json={"rider_id": "R00003", "scenario": "hard_handoff", "steps": 12})
+    kept = client.post("/lab/scenario", json={"rider_id": "R00003", "scenario": "new_phone", "steps": 2}).json()
+    assert kept["restored"] is None and client.get("/lab/state").json()["statuses"]["R00003"] == "suspended"
+
+
+def test_restoring_a_normal_rider_changes_nothing_important(client):
+    out = client.post("/lab/restore/R00004").json()
+    assert out["from"] == "active" and out["status"] == "active" and out["cases_closed"] == 0

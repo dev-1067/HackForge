@@ -147,15 +147,34 @@ class Lab:
         state = self.service.engine.get_state(rider_id)
         return state is not None and state.status in ESCALATED_STATUSES
 
-    def trigger(self, rider_id: str, scenario: str, steps: int = 0, auto_resolve: bool = True) -> dict[str, Any]:
+    def restore(self, rider_id: str) -> dict[str, Any]:
+        """Back to a normal account: close open cases and checks, end any staged attack. Recorded in the history."""
         with self._lock:
             world = self._need_world()
             if rider_id not in world.sims:
                 raise UnknownRider(rider_id)
+            result = self.service.restore_rider(rider_id)
+            self.focus.pop(rider_id, None)
+            sim = world.sims[rider_id]
+            sim.effects = [e for e in sim.effects if e.kind != "attack"]
+            meta = world.meta[rider_id]
+            if meta.scenario_kind == "attack":
+                meta.scenario_kind, meta.scenario = "", ""
+            self._open_at = 0.0
+            self._sync_blocked()
+            return result
+
+    def trigger(self, rider_id: str, scenario: str, steps: int = 0, auto_resolve: bool = True,
+                restore: bool = False) -> dict[str, Any]:
+        with self._lock:
+            world = self._need_world()
+            if rider_id not in world.sims:
+                raise UnknownRider(rider_id)
+            restored = self.restore(rider_id) if restore else None
             info = world.trigger(rider_id, scenario)
             self.service.bus.publish("lab", {"type": "scenario", **info})
             decisions = self.step(rider_id, steps, auto_resolve) if steps else []
-            return {"triggered": info, "decisions": decisions}
+            return {"triggered": info, "decisions": decisions, "restored": restored}
 
     def _background_step(self) -> None:
         """One background tick: usually a random rider, sometimes the next session of an incident in progress."""

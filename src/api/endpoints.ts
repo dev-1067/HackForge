@@ -80,10 +80,11 @@ export const ops = {
 export const lab = {
   scenarios: () => request<Scenario[]>('/lab/scenarios'),
   state: () => request<LabState>('/lab/state'),
-  trigger: (rider_id: string, scenario: string, steps: number, auto_resolve = true) =>
-    request<{ triggered: { title: string; scenario: string }; decisions: Decision[] }>('/lab/scenario', {
-      method: 'POST', body: { rider_id, scenario, steps, auto_resolve },
+  trigger: (rider_id: string, scenario: string, steps: number, auto_resolve = true, restore = false) =>
+    request<{ triggered: { title: string; scenario: string }; decisions: Decision[]; restored: { from: string } | null }>('/lab/scenario', {
+      method: 'POST', body: { rider_id, scenario, steps, auto_resolve, restore },
     }),
+  restore: (rider_id: string) => request<{ from: string; status: string; cases_closed: number }>(`/lab/restore/${encodeURIComponent(rider_id)}`, { method: 'POST' }),
   step: (rider_id: string | undefined, count: number, auto_resolve = true) =>
     request<Decision[]>('/lab/step', { method: 'POST', body: { rider_id, count, auto_resolve } }),
   run: (action: 'start' | 'stop', rate = 2, leaveForReview = false) =>

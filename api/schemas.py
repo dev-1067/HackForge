@@ -71,6 +71,7 @@ class LabScenarioIn(BaseModel):
     scenario: str
     steps: int = Field(0, ge=0, le=50, description="Sessions to generate and score right away.")
     auto_resolve: bool = True
+    restore: bool = Field(False, description="First put the rider's account back to normal (recorded in the history).")
 
 
 class LabStepIn(BaseModel):
